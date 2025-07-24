@@ -406,7 +406,7 @@ def randomChoice(array, size = 1, replace = True, engine = None):
     if hasattr(array,"shape"):  # TODO: not a problem actually. Should be able to use numpy.random.RandomState.choice(a, replace=False)
       raise RuntimeError("Option with replace False not available for ndarrays")
     if len(array) < size:
-      raise RuntimeError("array size < of number of requested samples (size)")
+      raise RuntimeError("array size < number of requested samples (size)")
 
   sel = []
   coords = array

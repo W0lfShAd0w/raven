@@ -237,7 +237,7 @@ def locationsGenerator(offSprings,locs):
 
 __mutators = {}
 __mutators['swapMutator']       = swapMutator
-__mutators['swapMutatorEQ']       = swapMutatorEQ
+__mutators['swapMutatorEQ']     = swapMutatorEQ
 __mutators['scrambleMutator']   = scrambleMutator
 __mutators['bitFlipMutator']    = bitFlipMutator
 __mutators['inversionMutator']  = inversionMutator
