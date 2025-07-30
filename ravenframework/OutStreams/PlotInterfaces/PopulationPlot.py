@@ -102,14 +102,14 @@ class PopulationPlot(PlotInterface):
     super().initialize(stepEntities)
     src = self.findSource(self.sourceName, stepEntities)
     if src is None:
-      self.raiseAnError(IOError, f'No source named "{self.sourceName}" was found in the Step for SamplePlot "{self.name}"!')
+      self.raiseAnError(IOError, f'No source named "{self.sourceName}" was found in the Step for PopulationPlot "{self.name}"!')
     self.source = src
 
     dataVars = self.source.getVars()
     missing = [var for var in (self.vars) if var not in dataVars]
     if missing:
       msg = f'Source DataObject "{self.source.name}" is missing the following variables ' +\
-            f'expected by OptPath plotter "{self.name}": '
+            f'expected by PopulationPlot plotter "{self.name}": '
       msg += ', '.join(f'"{m}"' for m in missing)
       self.raiseAnError(IOError, msg)
 
