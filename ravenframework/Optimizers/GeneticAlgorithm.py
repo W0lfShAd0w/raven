@@ -995,6 +995,7 @@ class GeneticAlgorithm(RavenSampled):
       for i in range(rlz.sizes['RAVEN_sample_ID']):
         if self._isMultiObjective:
           varList = self._solutionExport.getVars('input') + self._solutionExport.getVars('output') + list(self.toBeSampled.keys())
+          varList = [var for var in varList if var not in self._objectiveVar]
           rlzDict = dict((var,np.atleast_1d(rlz[var].data)[i]) for var in set(varList) if var in rlz.data_vars)
           rlzDict.update(self.population.isel(chromosome=i).to_series().to_dict()) #make sure none of the chromosomes were missed from self.toBeSampled.
           for j in range(len(self._objectiveVar)):
@@ -1024,6 +1025,7 @@ class GeneticAlgorithm(RavenSampled):
       bestRlz = {}
       if self._isMultiObjective:
         varList = self._solutionExport.getVars('input') + self._solutionExport.getVars('output') + list(self.toBeSampled.keys())
+        varList = [var for var in varList if var not in self._objectiveVar]
         bestRlz = dict((var,np.atleast_1d(self.multiBestPoint[var])) for var in set(varList) if var in list(self.toBeSampled.keys()))
         for i in range(len(self._objectiveVar)):
           bestRlz[self._objectiveVar[i]] = [item[i] for item in self.multiBestObjective]
@@ -1080,6 +1082,7 @@ class GeneticAlgorithm(RavenSampled):
       @ Out, point, dict, point used in this realization
     """
     varList = set(list(self.toBeSampled.keys()) + self._solutionExport.getVars('input') + self._solutionExport.getVars('output'))
+    varList = [var for var in varList if var not in self._objectiveVar]
     selVars = [var for var in varList if var in rlz.data_vars]
 
     rankOneIDX = np.where(rank.data == 1)[0].tolist()
