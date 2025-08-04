@@ -132,6 +132,7 @@ def crowdingDistance(rank, popSize, fitness):
     if numPoints <= 2:  # If front has 2 or fewer points, set to infinity
       crowdDist[frontIndices[f]] = np.inf
       continue
+    boundaries = []
     for obj in range(numObjectives):
       # Sort points in current front by current objective
       sortedFront = [i for i in front]
@@ -143,13 +144,11 @@ def crowdingDistance(rank, popSize, fitness):
       crowdDist[sortedFront[-1]] = np.inf
 
       # Ensure all repeated boundary points are set to infinity
-      boundaryValueMin = fitness[sortedFront[0], obj]
-      boundaryValueMax = fitness[sortedFront[-1], obj]
+      boundaries.append(fitness[sortedFront[0], :])
+      boundaries.append(fitness[sortedFront[-1], :])
 
       for i in range(1, numPoints - 1):
-        if fitness[sortedFront[i], obj] == boundaryValueMin:
-          crowdDist[sortedFront[i]] = np.inf
-        if fitness[sortedFront[i], obj] == boundaryValueMax:
+        if any(np.array_equal(fitness[sortedFront[i],:],arr) for arr in boundaries):
           crowdDist[sortedFront[i]] = np.inf
 
       # Skip normalization if all values are identical
