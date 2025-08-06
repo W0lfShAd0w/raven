@@ -26,6 +26,7 @@
     <NodeParameter>--hostfile</NodeParameter>
     <RemoteRunCommand>raven_ec_qsub_command.sh</RemoteRunCommand>
     <parallelMethod>ray</parallelMethod>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Steps>

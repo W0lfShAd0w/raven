@@ -4,7 +4,9 @@
     <WorkingDir>ROM</WorkingDir>
     <Sequence>uqWithCov,Dump</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
+
   <TestInfo>
     <name>framework/pca_rom.ROM</name>
     <author>wangc</author>

@@ -1,4 +1,4 @@
-<?xml version="1.0"?>
+<?xml version="1.0" ?>
 <Simulation printTimeStamps="false">
   <TestInfo>
     <name>framework/Samplers/SparseGrid/exponential</name>
@@ -14,6 +14,7 @@
     <WorkingDir>scgpc</WorkingDir>
     <Sequence>Emake, Etrain, Etest, stats, Eprint</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Distributions>

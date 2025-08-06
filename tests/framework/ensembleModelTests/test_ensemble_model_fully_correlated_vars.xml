@@ -12,6 +12,7 @@
       <revision author="alfoa" date="2017-12-07">Added the test</revision>
     </revisions>
   </TestInfo>
+
   <RunInfo>
     <JobName>ensembleModelFullyCorrVars</JobName>
     <Sequence>
@@ -19,6 +20,7 @@
     </Sequence>
     <WorkingDir>ensembleModelFullyCorrVars</WorkingDir>
     <batchSize>2</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Files>

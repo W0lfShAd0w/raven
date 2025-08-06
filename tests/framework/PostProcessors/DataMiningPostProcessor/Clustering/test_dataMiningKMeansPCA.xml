@@ -20,6 +20,7 @@
     <WorkingDir>KMeansPCA</WorkingDir>
     <Sequence>read_in_csv1,pp1,pp2</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Files>

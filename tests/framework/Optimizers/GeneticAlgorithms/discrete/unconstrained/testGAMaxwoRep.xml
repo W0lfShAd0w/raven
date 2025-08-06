@@ -18,6 +18,7 @@
   <RunInfo>
     <WorkingDir>MaxwoReplacement</WorkingDir>
     <Sequence>optimize, print</Sequence>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Steps>

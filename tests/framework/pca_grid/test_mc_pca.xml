@@ -4,7 +4,9 @@
     <WorkingDir>mcPCA</WorkingDir>
     <Sequence>FirstMRun,Dump</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
+
   <TestInfo>
     <name>framework/pca_grid/mcPCA</name>
     <author>wangc</author>

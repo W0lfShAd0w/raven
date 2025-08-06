@@ -22,6 +22,7 @@
   <RunInfo>
     <WorkingDir>Hierarchical</WorkingDir>
     <Sequence>readIn,Hierarchical</Sequence>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Files>

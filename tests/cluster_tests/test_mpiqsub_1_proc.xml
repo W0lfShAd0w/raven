@@ -21,6 +21,7 @@
     <NumMPI>2</NumMPI>
     <expectedTime>0:10:00</expectedTime>
     <JobName>test_mpiqsu</JobName>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Files>

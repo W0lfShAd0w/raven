@@ -4,7 +4,9 @@
     <WorkingDir>MVNRel</WorkingDir>
     <Sequence>RelRun</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
+
   <TestInfo>
     <name>framework/pca_rom/MVNRel</name>
     <author>wangc</author>

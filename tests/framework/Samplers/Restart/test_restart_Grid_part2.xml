@@ -4,7 +4,9 @@
     <WorkingDir>gridSplit</WorkingDir>
     <Sequence>load_old, makeCoarse,print</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
+
   <TestInfo>
     <name>framework/Samplers/Restart.Grid</name>
     <author>cogljj</author>
@@ -23,7 +25,7 @@
 
   <Steps>
     <IOStep name="load_old">
-      <Input class='Files' type=''>old_solns</Input>
+      <Input class="Files" type="">old_solns</Input>
       <Output class="DataObjects" type="PointSet">solns_orig</Output>
     </IOStep>
     <MultiRun name="makeCoarse">

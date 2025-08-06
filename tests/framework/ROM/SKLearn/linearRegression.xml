@@ -32,6 +32,7 @@
       resample,
       writemodel
     </Sequence>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Models>
@@ -49,7 +50,9 @@
 
   <ExternalXML node="Distributions" xmlToLoad="sharedDistributions.xml"/>
   <ExternalXML node="Samplers" xmlToLoad="sharedSamplers.xml"/>
-  <!-- <ExternalXML node="Steps" xmlToLoad="sharedSteps.xml"/> -->
+  <!--
+    <ExternalXML node="Steps" xmlToLoad="sharedSteps.xml"/>
+  -->
 
   <Steps>
     <MultiRun name="sample" sleepTime="1e-5">
@@ -76,7 +79,6 @@
     </IOStep>
   </Steps>
 
-
   <OutStreams>
     <!-- A csv file containing the output of the example -->
     <Print name="outData">
@@ -94,5 +96,4 @@
   </OutStreams>
 
   <ExternalXML node="DataObjects" xmlToLoad="sharedDataObjects.xml"/>
-
 </Simulation>

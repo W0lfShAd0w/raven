@@ -4,7 +4,9 @@
     <WorkingDir>oneDimPCA</WorkingDir>
     <Sequence>FirstMRun,Dump</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
+
   <TestInfo>
     <name>framework/pca_rom/oneDim</name>
     <author>wangc</author>

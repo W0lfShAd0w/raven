@@ -23,6 +23,7 @@
   <RunInfo>
     <WorkingDir>MultipleArma</WorkingDir>
     <Sequence>read,train,sample,write,load,stats</Sequence>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Steps>

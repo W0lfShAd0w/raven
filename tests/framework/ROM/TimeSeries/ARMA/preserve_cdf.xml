@@ -24,6 +24,7 @@
       sample, valdur_orig, valdur_samples,
       load_gold_vdcs, vdc_metric, out
     </Sequence>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Steps>

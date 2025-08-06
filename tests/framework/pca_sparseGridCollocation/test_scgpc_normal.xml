@@ -4,7 +4,9 @@
     <WorkingDir>scgpc</WorkingDir>
     <Sequence>Nmake,Nprint1,Ntrain,Ntest</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
+
   <TestInfo>
     <name>framework/pca_sparseGrid/normal</name>
     <author>wangc</author>

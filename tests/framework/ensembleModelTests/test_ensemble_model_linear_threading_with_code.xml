@@ -17,6 +17,7 @@
       <revision author="alfoa" date="2017-01-21">Adding this test description.</revision>
     </revisions>
   </TestInfo>
+
   <RunInfo>
     <JobName>metaModelWithCode</JobName>
     <Sequence>
@@ -24,6 +25,7 @@
     </Sequence>
     <WorkingDir>metaModelWithCode</WorkingDir>
     <batchSize>2</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Files>

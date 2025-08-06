@@ -1,3 +1,4 @@
+<?xml version="1.0" ?>
 <Simulation printTimeStamps="false">
   <TestInfo>
     <name>framework/Samplers/SparseGrid/uniform_cc</name>
@@ -13,6 +14,7 @@
     <WorkingDir>scgpc</WorkingDir>
     <Sequence>UCmake, UCtrain, UCtest, stats, UCprint</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Distributions>

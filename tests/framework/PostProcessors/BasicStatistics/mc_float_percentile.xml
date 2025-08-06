@@ -4,6 +4,7 @@
     <WorkingDir>basicStatsMonteCarloPercentileFloat</WorkingDir>
     <Sequence>SamplingMirrowModelMC,PP1mc</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <TestInfo>

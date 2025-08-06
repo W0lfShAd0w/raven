@@ -17,6 +17,7 @@
     <WorkingDir>Multicycle</WorkingDir>
     <Sequence>read, train, print, pickle, sample, dump</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Steps>

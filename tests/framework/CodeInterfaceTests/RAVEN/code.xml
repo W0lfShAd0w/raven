@@ -1,3 +1,4 @@
+<?xml version="1.0" ?>
 <Simulation verbosity="debug">
   <TestInfo>
     <name>framework/CodeInterfaceTests/RAVEN.Code</name>
@@ -21,6 +22,7 @@
     <WorkingDir>Code</WorkingDir>
     <batchSize>1</batchSize>
     <Sequence>sample,print</Sequence>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Steps>
@@ -38,16 +40,16 @@
   </Steps>
 
   <Files>
-    <Input name="inner_input" type="raven" >inner_sample.xml</Input>
-    <Input name="proj" type="exec" perturbable='False' >projectile.py</Input>
+    <Input name="inner_input" type="raven">inner_sample.xml</Input>
+    <Input name="proj" type="exec" perturbable="False">projectile.py</Input>
   </Files>
 
   <Models>
     <Code name="raven" subType="RAVEN">
-        <executable>%RAVENEXECUTABLE%</executable>
-        <outputExportOutStreams>inner_out</outputExportOutStreams>
-        <alias variable="innerLowerBound" type="input">Distributions|Uniform@name:v0_dist|lowerBound</alias>
-        <alias variable="innerUpperBound" type="input">Distributions|Uniform@name:v0_dist|upperBound</alias>
+      <executable>%RAVENEXECUTABLE%</executable>
+      <outputExportOutStreams>inner_out</outputExportOutStreams>
+      <alias variable="innerLowerBound" type="input">Distributions|Uniform@name:v0_dist|lowerBound</alias>
+      <alias variable="innerUpperBound" type="input">Distributions|Uniform@name:v0_dist|upperBound</alias>
     </Code>
   </Models>
 
@@ -66,11 +68,11 @@
     <Grid name="grid">
       <variable name="innerLowerBound">
         <distribution>dist_lower</distribution>
-        <grid type='CDF' construction='equal' steps='1'>0 1</grid>
+        <grid type="CDF" construction="equal" steps="1">0 1</grid>
       </variable>
       <variable name="innerUpperBound">
         <distribution>dist_upper</distribution>
-        <grid type='CDF' construction='equal' steps='1'>0 1</grid>
+        <grid type="CDF" construction="equal" steps="1">0 1</grid>
       </variable>
     </Grid>
   </Samplers>
