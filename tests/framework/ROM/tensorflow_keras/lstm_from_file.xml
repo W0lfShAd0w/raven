@@ -1,5 +1,5 @@
 <?xml version="1.0" ?>
-<Simulation verbosity='debug'>
+<Simulation verbosity="debug">
   <TestInfo>
     <name>framework/Samplers/ROM/tensorflow_keras.LSTMFromFile</name>
     <author>talbpaul</author>
@@ -15,6 +15,7 @@
   <RunInfo>
     <WorkingDir>data</WorkingDir>
     <Sequence>loadTraining, train, loadTesting, sample, print</Sequence>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Files>
@@ -101,16 +102,16 @@
     <DataSet name="training">
       <Input>presequence</Input>
       <Output>nextval</Output>
-      <Index var='t'>presequence</Index>
+      <Index var="t">presequence</Index>
     </DataSet>
     <DataSet name="testing">
       <Input>presequence</Input>
-      <Index var='t'>presequence</Index>
+      <Index var="t">presequence</Index>
     </DataSet>
     <DataSet name="rom_samples">
       <Input>presequence</Input>
       <Output>nextval</Output>
-      <Index var='t'>presequence</Index>
+      <Index var="t">presequence</Index>
     </DataSet>
   </DataObjects>
 
@@ -120,4 +121,5 @@
       <source>rom_samples</source>
     </Print>
   </OutStreams>
+
 </Simulation>

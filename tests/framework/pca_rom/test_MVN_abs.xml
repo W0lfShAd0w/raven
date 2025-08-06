@@ -4,7 +4,9 @@
     <WorkingDir>MVNAbs</WorkingDir>
     <Sequence>AbsRun</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
+
   <TestInfo>
     <name>framework/pca_rom/MVNAbs</name>
     <author>wangc</author>

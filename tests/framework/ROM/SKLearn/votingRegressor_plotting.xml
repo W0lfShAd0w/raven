@@ -30,6 +30,7 @@
       resampleRidgeCV,
       plot
     </Sequence>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Models>
@@ -129,13 +130,13 @@
       <Output class="Models" type="ROM">ridgeCV</Output>
     </RomTrainer>
     <IOStep name="plot">
-      <Input   class="DataObjects"  type="PointSet">outData</Input>
-      <Input   class="DataObjects"  type="PointSet">outDataVR</Input>
-      <Input   class="DataObjects"  type="PointSet">outDataSVR</Input>
-      <Input   class="DataObjects"  type="PointSet">outDataLR</Input>
-      <Input   class="DataObjects"  type="PointSet">outDataRidgeCV</Input>
+      <Input class="DataObjects" type="PointSet">outData</Input>
+      <Input class="DataObjects" type="PointSet">outDataVR</Input>
+      <Input class="DataObjects" type="PointSet">outDataSVR</Input>
+      <Input class="DataObjects" type="PointSet">outDataLR</Input>
+      <Input class="DataObjects" type="PointSet">outDataRidgeCV</Input>
       <Output class="OutStreams" type="Print">outData</Output>
-      <Output  class="OutStreams"   type="Plot">votingRegressor</Output>
+      <Output class="OutStreams" type="Plot">votingRegressor</Output>
     </IOStep>
   </Steps>
 
@@ -184,7 +185,7 @@
       <source>outData</source>
       <filename>outVotingRegressor_plotting</filename>
     </Print>
-    <Plot  name="votingRegressor">
+    <Plot name="votingRegressor">
       <plotSettings>
         <plot>
           <type>scatter</type>

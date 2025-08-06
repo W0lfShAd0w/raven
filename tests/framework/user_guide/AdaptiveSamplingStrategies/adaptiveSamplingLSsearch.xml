@@ -5,6 +5,7 @@
     <Sequence>sample,computeLSintegral,writeHistories</Sequence>
     <WorkingDir>LSsearch</WorkingDir>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <TestInfo>

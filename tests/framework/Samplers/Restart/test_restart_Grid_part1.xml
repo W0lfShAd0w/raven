@@ -4,7 +4,9 @@
     <WorkingDir>gridSplit</WorkingDir>
     <Sequence>makeCoarse,print</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
+
   <TestInfo>
     <name>framework/Samplers/Restart.Grid</name>
     <author>cogljj</author>

@@ -458,7 +458,7 @@ class GeneticAlgorithm(RavenSampled):
                     \item \textit{uniformCrossover} - It randomly selects genes from two parent chromosomes with equal probability, creating offspring by exchanging genes at corresponding positions.
                   \end{itemize}""")
     crossover.addParam("type",
-                       InputTypes.makeEnumType('crossover','crossoverType',['onePointCrossover','twoPointsCrossover','uniformCrossover']),
+                       InputTypes.makeEnumType('crossover','crossoverType',['onePointCrossover','twoPointsCrossover','uniformCrossover','EQCrossover']),
                        True,
                        descr="type of crossover operation to be used. See the list of options above.")
     crossoverPoint = InputData.parameterInputFactory('points', strictMode=True,
@@ -487,7 +487,7 @@ class GeneticAlgorithm(RavenSampled):
                   \item \textit{randomMutator} - It randomly selects a gene within an chromosome and mutates the gene.
                 \end{itemize} """)
     mutation.addParam("type",
-                      InputTypes.makeEnumType('mutation','mutationType',['swapMutator','scrambleMutator','inversionMutator','randomMutator']),
+                      InputTypes.makeEnumType('mutation','mutationType',['swapMutator','scrambleMutator','inversionMutator','randomMutator','swapMutatorEQ']),
                       True,
                       descr="type of mutation operation to be used. See the list of options above.")
     mutationLocs = InputData.parameterInputFactory('locs', strictMode=True,
@@ -796,6 +796,15 @@ class GeneticAlgorithm(RavenSampled):
       self._closeTrajectory(t, 'cancel', 'Currently GA is single trajectory', 0)
     self.incrementIteration(traj)
 
+    files = self.assemblerDict['Files']
+    ## add checker/here 
+    EQflag = any("EQinput" in sublist for sublist in files)
+    if EQflag:
+      self._EQcheckfile = files
+    else:
+      self._EQcheckfile = None
+    
+
     population = datasetToDataArray(rlz, list(self.toBeSampled))
 
     objectiveVal = []
@@ -844,7 +853,8 @@ class GeneticAlgorithm(RavenSampled):
           self.objectiveVal = []
           for i in range(len(self._objectiveVar)):
             self.objectiveVal.append(list(np.atleast_1d(rlz[self._objectiveVar[i]].data)))
-        self._collectOptPointMulti(self.population,
+        self._collectOptPointMulti(rlz,
+                                   self.population,
                                    self.rank,
                                    self.crowdingDistance,
                                    self.objectiveVal,
@@ -866,18 +876,19 @@ class GeneticAlgorithm(RavenSampled):
                                               )
 
       # 7. Reproduction
+	  ### Modified with EQ cycle
       # 7.1 Crossover
       childrenXover = self._crossoverInstance(parents=parents,
                                               variables=list(self.toBeSampled),
                                               crossoverProb=self._crossoverProb,
-                                              points=self._crossoverPoints)
+                                              points=self._crossoverPoints, EQfiles = self._EQcheckfile)
 
       # 7.2 Mutation
       childrenMutated = self._mutationInstance(offSprings=childrenXover,
                                                distDict=self.distDict,
                                                locs=self._mutationLocs,
                                                mutationProb=self._mutationProb,
-                                               variables=list(self.toBeSampled))
+                                               variables=list(self.toBeSampled), EQfiles = self._EQcheckfile)
 
       # 8. repair/replacement
       # Repair should only happen if multiple genes in a single chromosome have the same values (),
@@ -983,9 +994,13 @@ class GeneticAlgorithm(RavenSampled):
       self.raiseADebug("### rlz.sizes['RAVEN_sample_ID'] = {}".format(rlz.sizes['RAVEN_sample_ID']))
       for i in range(rlz.sizes['RAVEN_sample_ID']):
         if self._isMultiObjective:
-          rlzDict = self.population.isel(chromosome=i).to_series().to_dict()
+          varList = self._solutionExport.getVars('input') + self._solutionExport.getVars('output') + list(self.toBeSampled.keys())
+          varList = [var for var in varList if var not in self._objectiveVar]
+          rlzDict = dict((var,np.atleast_1d(rlz[var].data)[i]) for var in set(varList) if var in rlz.data_vars)
+          rlzDict.update(self.population.isel(chromosome=i).to_series().to_dict()) #make sure none of the chromosomes were missed from self.toBeSampled.
           for j in range(len(self._objectiveVar)):
-             rlzDict[self._objectiveVar[j]] = self.objectiveVal[j][i]
+            if self._objectiveVar[j] not in rlzDict:
+              rlzDict[self._objectiveVar[j]] = self.objectiveVal[j][i]
           rlzDict['batchId'] = self.batchId
           rlzDict['rank'] = np.atleast_1d(self.rank.data)[i]
           rlzDict['CD'] = np.atleast_1d(self.crowdingDistance.data)[i]
@@ -997,7 +1012,8 @@ class GeneticAlgorithm(RavenSampled):
           varList = self._solutionExport.getVars('input') + self._solutionExport.getVars('output') + list(self.toBeSampled.keys())
           rlzDict = dict((var,np.atleast_1d(rlz[var].data)[i]) for var in set(varList) if var in rlz.data_vars)
           for j in range(len(self._objectiveVar)):
-            rlzDict[self._objectiveVar[j]] = np.atleast_1d(rlz[self._objectiveVar[j]].data)[i]
+            if self._objectiveVar[j] not in rlzDict:
+              rlzDict[self._objectiveVar[j]] = np.atleast_1d(rlz[self._objectiveVar[j]].data)[i]
           rlzDict['fitness'] = np.atleast_1d(fitness.to_array()[:,i])
           for ind, consName in enumerate(g['Constraint'].values):
             rlzDict['ConstraintEvaluation_'+consName] = g[i,ind]
@@ -1009,6 +1025,7 @@ class GeneticAlgorithm(RavenSampled):
       bestRlz = {}
       if self._isMultiObjective:
         varList = self._solutionExport.getVars('input') + self._solutionExport.getVars('output') + list(self.toBeSampled.keys())
+        varList = [var for var in varList if var not in self._objectiveVar]
         bestRlz = dict((var,np.atleast_1d(self.multiBestPoint[var])) for var in set(varList) if var in list(self.toBeSampled.keys()))
         for i in range(len(self._objectiveVar)):
           bestRlz[self._objectiveVar[i]] = [item[i] for item in self.multiBestObjective]
@@ -1053,7 +1070,7 @@ class GeneticAlgorithm(RavenSampled):
 
     return point
 
-  def _collectOptPointMulti(self, population, rank, CD, objVal, fitness, constraintsV):
+  def _collectOptPointMulti(self, rlz, population, rank, CD, objVal, fitness, constraintsV):
     """
       Collects the point (dict) from a realization
       @ In, population, Dataset, container containing the population
@@ -1064,6 +1081,10 @@ class GeneticAlgorithm(RavenSampled):
       @ In, constraintsV, xr.DataArray, calculated contraints value
       @ Out, point, dict, point used in this realization
     """
+    varList = set(list(self.toBeSampled.keys()) + self._solutionExport.getVars('input') + self._solutionExport.getVars('output'))
+    #!varList = [var for var in varList if var not in self._objectiveVar] #!TODO:this appears to be desyncing the estimated 'final' rlzs. 
+    selVars = [var for var in varList if var in rlz.data_vars]
+
     rankOneIDX = np.where(rank.data == 1)[0].tolist()
     optPoints = population[rankOneIDX]
     optObjVal = np.array(objVal)[:,rankOneIDX].T
@@ -1079,7 +1100,8 @@ class GeneticAlgorithm(RavenSampled):
     optRank = rank.data[rankOneIDX]
     optCD = CD.data[rankOneIDX]
 
-    optPointsDic = dict((var,np.array(optPoints)[:,i]) for i, var in enumerate(population.Gene.data))
+    #!optPointsDic = dict((var,np.array(optPoints)[:,i]) for i, var in enumerate(population.Gene.data))
+    optPointsDic = dict((var,rlz.isel({'RAVEN_sample_ID': rankOneIDX})[var].data) for var in selVars)
     optConstNew = [list(y) for y in zip(*optConstraintsV)]
     if len(optConstNew) > 0:
       optConstNew = xr.DataArray(optConstNew,

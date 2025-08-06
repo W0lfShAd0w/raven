@@ -1,4 +1,4 @@
-<?xml version="1.0"?>
+<?xml version="1.0" ?>
 <Simulation verbosity="silent">
   <TestInfo>
     <name>framework/PostProcessors/EconomicRatio/general</name>
@@ -12,11 +12,14 @@
       <revision author="dgarrett622" date="2022-08-23">add request for multiple value at risk and expected shortfall</revision>
     </revisions>
   </TestInfo>
+
   <RunInfo>
     <WorkingDir>economicRatioGeneral</WorkingDir>
     <batchSize>1</batchSize>
     <Sequence>MCSample,VaREcon</Sequence>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
+
   <Distributions>
     <Normal name="NPV_dist">
       <mean>5</mean>
@@ -31,6 +34,7 @@
       <sigma>2</sigma>
     </Normal>
   </Distributions>
+
   <Samplers>
     <MonteCarlo name="normalMC">
       <samplerInit>
@@ -47,6 +51,7 @@
       </variable>
     </MonteCarlo>
   </Samplers>
+
   <Models>
     <Dummy name="MyDummy" subType=""/>
     <PostProcessor name="EconRatio" subType="EconomicRatio">
@@ -94,6 +99,7 @@
       </VarianceDependentSensitivity>
     </PostProcessor>
   </Models>
+
   <Steps>
     <MultiRun name="MCSample" re-seeding="42424242">
       <Input class="DataObjects" type="PointSet">InputPlaceholder</Input>
@@ -108,6 +114,7 @@
       <Output class="OutStreams" type="Print">EconVaRResult_dump</Output>
     </PostProcess>
   </Steps>
+
   <DataObjects>
     <PointSet name="InputPlaceholder">
       <Input>NPV,x,y</Input>
@@ -151,6 +158,7 @@
         varsen_NPV_x</Output>
     </PointSet>
   </DataObjects>
+
   <OutStreams>
     <Print name="EconVaRResult_dump">
       <type>csv</type>

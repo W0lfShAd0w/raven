@@ -4,6 +4,7 @@
     <WorkingDir>basicStatisticsTimeDependentAsynchronousHistories</WorkingDir>
     <Sequence>FirstMRun,syncronizeHistorySetStep,timeDepBasicStatPP,FirstMRunEnsemble,syncronizeHistorySetStepEnsemble,timeDepBasicStatPPEnsemble</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <TestInfo>

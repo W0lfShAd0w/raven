@@ -4,6 +4,7 @@
     <WorkingDir>basicStatisticsGeneral</WorkingDir>
     <Sequence>FirstMRun,PP1,PP2,PP3,PP4,PP5,PP6</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <TestInfo>

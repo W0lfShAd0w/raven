@@ -22,6 +22,7 @@
   <RunInfo>
     <WorkingDir>./</WorkingDir>
     <Sequence>optimize, collect_final, print</Sequence>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Steps>

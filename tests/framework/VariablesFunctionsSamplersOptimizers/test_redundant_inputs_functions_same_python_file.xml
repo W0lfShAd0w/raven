@@ -22,12 +22,12 @@
     <WorkingDir>RedundantInputsFunctionsSameModule</WorkingDir>
     <Sequence>sim_py_MC</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Files>
     <Input name="input.py" type="">../RedundantInputs/input.py</Input>
     <Input name="simp_imp.py" type="">RedundantInputs/simp_imp.py</Input>
-    
   </Files>
 
   <Steps>

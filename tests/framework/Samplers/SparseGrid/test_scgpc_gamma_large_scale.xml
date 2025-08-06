@@ -4,6 +4,7 @@
     <WorkingDir>scgpc</WorkingDir>
     <Sequence>makeG, trainG, testG, stats, printG, printRomG</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <TestInfo>

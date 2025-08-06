@@ -20,6 +20,7 @@
     <WorkingDir>VariationalGMM</WorkingDir>
     <Sequence>sampleGen,pp1,writeOut</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Files>

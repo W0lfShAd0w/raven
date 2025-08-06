@@ -34,11 +34,14 @@
   <RunInfo>
     <WorkingDir>SerializeWrkd</WorkingDir>
     <Sequence>extSerialization,extSerielizedLoading,sample2,print</Sequence>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
+
   <Files>
     <Input name="attenuatepk" type="">attenuate_pk</Input>
     <Input name="attenuatepk2" type="">attenuate_pk2</Input>
   </Files>
+
   <Steps>
     <MultiRun name="sample">
       <Input class="DataObjects" type="PointSet">placeholder</Input>
@@ -88,11 +91,11 @@
     <Grid name="grid">
       <variable name="y1">
         <distribution>dist</distribution>
-        <grid type='CDF' construction='equal' steps='1'>0 1</grid>
+        <grid type="CDF" construction="equal" steps="1">0 1</grid>
       </variable>
       <variable name="y2">
         <distribution>dist</distribution>
-        <grid type='CDF' construction='equal' steps='1'>0 1</grid>
+        <grid type="CDF" construction="equal" steps="1">0 1</grid>
       </variable>
     </Grid>
   </Samplers>

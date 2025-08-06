@@ -27,6 +27,7 @@
     <batchSize>4</batchSize>
     <maxQueueSize>100</maxQueueSize>
     <internalParallel>True</internalParallel>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Steps>

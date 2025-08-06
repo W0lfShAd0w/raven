@@ -1,8 +1,10 @@
+<?xml version="1.0" ?>
 <Simulation printTimeStamps="false">
   <RunInfo>
     <WorkingDir>scgpc</WorkingDir>
     <Sequence>Nmake, Ntrain, Ntest, stats, Nprint</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <TestInfo>

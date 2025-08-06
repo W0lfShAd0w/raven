@@ -10,7 +10,7 @@
        In this case the functionality of the parallelization is tested for the Model External Model with ray
     </description>
     <revisions>
-      <revision author="alfoa" date="2015-10-19">New syntax form samplerInit: from sampler_init -> samplerInit</revision>
+      <revision author="alfoa" date="2015-10-19">New syntax form samplerInit: from sampler_init -&gt; samplerInit</revision>
       <revision author="maljdan" date="2016-04-06">Updating test cases to reflect the changes to the user input.</revision>
       <revision author="maljdan" date="2016-05-20">Updating the test cases to remove references to Point or History.</revision>
       <revision author="alfoa" date="2017-01-21">Adding this test description.</revision>
@@ -19,12 +19,14 @@
     </revisions>
     <requirements>R-IS-8</requirements>
   </TestInfo>
+
   <!-- RUNINFO -->
   <RunInfo>
     <WorkingDir>InternalParallelExtModelRay</WorkingDir>
     <Sequence>ParalleMonteCarlo</Sequence>
     <batchSize>4</batchSize>
     <parallelMethod>ray</parallelMethod>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <!-- STEPS -->

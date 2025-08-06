@@ -18,6 +18,7 @@
     <WorkingDir>Multi_beale_bealeFlipped</WorkingDir>
     <Sequence>optimize,print</Sequence>
     <batchSize>4</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Steps>
@@ -44,7 +45,7 @@
   </Models>
 
   <Distributions>
-    <Uniform name='woRep_dist'>
+    <Uniform name="woRep_dist">
       <lowerBound>0</lowerBound>
       <upperBound>5</upperBound>
     </Uniform>
@@ -126,4 +127,5 @@
       <clusterLabel>trajID</clusterLabel>
     </Print>
   </OutStreams>
+
 </Simulation>

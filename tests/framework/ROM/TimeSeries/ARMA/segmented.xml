@@ -26,6 +26,7 @@
   <RunInfo>
     <WorkingDir>Segmented</WorkingDir>
     <Sequence>load,train,rommeta,dump,unpickle,sample,print,reload,stats</Sequence>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Steps>

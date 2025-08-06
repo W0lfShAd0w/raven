@@ -1,3 +1,4 @@
+<?xml version="1.0" ?>
 <Simulation verbosity="debug">
   <TestInfo>
     <name>framework/ensembleModelTests.NDEnsemble2Outs</name>
@@ -12,6 +13,7 @@
   <RunInfo>
     <WorkingDir>NDEnsemble2Outs</WorkingDir>
     <Sequence>sample</Sequence>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Steps>
@@ -66,11 +68,13 @@
       <variables>c, d</variables>
     </ExternalModel>
     <EnsembleModel name="ens" subType="">
-      <Model class="Models" type="ExternalModel">NDModel
+      <Model class="Models" type="ExternalModel">
+        NDModel
         <Input class="DataObjects" type="PointSet">placeholder</Input>
         <TargetEvaluation class="DataObjects" type="DataSet">nd_eval</TargetEvaluation>
       </Model>
-      <Model class="Models" type="ExternalModel">Summary
+      <Model class="Models" type="ExternalModel">
+        Summary
         <Input class="DataObjects" type="PointSet">placeholder</Input>
         <TargetEvaluation class="DataObjects" type="DataSet">s_eval</TargetEvaluation>
       </Model>

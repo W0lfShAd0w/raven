@@ -4,6 +4,7 @@
     <WorkingDir>compStatsGrid</WorkingDir>
     <Sequence>gridRun, PP1, PP2</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <TestInfo>

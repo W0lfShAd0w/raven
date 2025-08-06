@@ -20,6 +20,7 @@
     <WorkingDir>MaxwoReplacementDiffDist</WorkingDir>
     <Sequence>optimize, print</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Steps>

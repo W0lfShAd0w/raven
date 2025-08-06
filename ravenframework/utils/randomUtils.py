@@ -218,7 +218,7 @@ class NumpyRNG:
     """
     self._engine = None
     self._seed = None
-    self.seed(5489)  # default seed of boost::random::mt19937
+    self.seed(None)  # default seed of boost::random::mt19937 was 5489. If this is desired, set <globalSeed>5489</globalSeed> under node <RunInfo> in the '.xml'.
 
   def seed(self, value):
     """
@@ -226,7 +226,10 @@ class NumpyRNG:
       @ In, value, int, RNG seed
       @ Out, None
     """
-    self._seed = abs(int(value))
+    if value is not None:
+      self._seed = abs(int(value))
+    else:
+      self._seed = value #'None' prompts the bitGenerator to grab a "high entropy seed from the OS" (presumably the system clock)
     # According to the numpy docs, best practice is to create a new Generator rather than reseed an
     # existing one.
     bitGenerator = np.random.MT19937()
@@ -406,7 +409,7 @@ def randomChoice(array, size = 1, replace = True, engine = None):
     if hasattr(array,"shape"):  # TODO: not a problem actually. Should be able to use numpy.random.RandomState.choice(a, replace=False)
       raise RuntimeError("Option with replace False not available for ndarrays")
     if len(array) < size:
-      raise RuntimeError("array size < of number of requested samples (size)")
+      raise RuntimeError("array size < number of requested samples (size)")
 
   sel = []
   coords = array

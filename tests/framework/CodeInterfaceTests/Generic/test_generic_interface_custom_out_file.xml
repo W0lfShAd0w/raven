@@ -19,11 +19,13 @@
     </revisions>
     <requirements>R-IS-6</requirements>
   </TestInfo>
+
   <RunInfo>
     <JobName>GenericInterfaceIOCustomOutput</JobName>
     <Sequence>sample</Sequence>
     <WorkingDir>GenericInterfaceIOCustomOutput</WorkingDir>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Files>

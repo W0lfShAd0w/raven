@@ -26,6 +26,7 @@
       resampleDecisionTree,
       plot
     </Sequence>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Models>
@@ -86,11 +87,11 @@
       <Output class="Models" type="ROM">dtr</Output>
     </RomTrainer>
     <IOStep name="plot">
-      <Input   class="DataObjects"  type="PointSet">outData</Input>
-      <Input   class="DataObjects"  type="PointSet">outDataAdaBoost</Input>
-      <Input   class="DataObjects"  type="PointSet">outDataDTR</Input>
+      <Input class="DataObjects" type="PointSet">outData</Input>
+      <Input class="DataObjects" type="PointSet">outDataAdaBoost</Input>
+      <Input class="DataObjects" type="PointSet">outDataDTR</Input>
       <Output class="OutStreams" type="Print">outData</Output>
-      <Output  class="OutStreams"   type="Plot">AdaBoostRegressor</Output>
+      <Output class="OutStreams" type="Plot">AdaBoostRegressor</Output>
     </IOStep>
   </Steps>
 
@@ -139,7 +140,7 @@
       <source>outData</source>
       <filename>outAdaBoostRegressor_plotting</filename>
     </Print>
-    <Plot  name="AdaBoostRegressor">
+    <Plot name="AdaBoostRegressor">
       <plotSettings>
         <plot>
           <type>scatter</type>

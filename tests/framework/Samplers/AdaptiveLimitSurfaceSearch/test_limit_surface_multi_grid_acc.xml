@@ -24,6 +24,7 @@
     <WorkingDir>limitSurfaceMultiGrid</WorkingDir>
     <Sequence>GoalOrientedStep,dumpLSout</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Steps>

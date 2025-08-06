@@ -24,6 +24,7 @@
       stats_rom,
       export_rom_stats
     </Sequence>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Models>
@@ -76,7 +77,7 @@
       <Output class="OutStreams" type="Print">rom_stats_sklearn_var_red</Output>
     </IOStep>
   </Steps>
-  
+
   <OutStreams>
     <!-- A csv file containing the output of the example -->
     <Print name="outData">
