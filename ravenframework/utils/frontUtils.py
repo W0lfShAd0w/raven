@@ -94,7 +94,7 @@ def rankNonDominatedFrontiers(data,isFitness=False):
     rank += 1
     # Get non-dominated points from remaining data
     if not isFitness:
-      currentFront = nonDominatedFrontier(data[mask], False)
+      currentFront = nonDominatedFrontier(data[mask], False, [False] * data.shape[1], isFitness=isFitness)
     else:
       currentFront = nonDominatedFrontier(data[mask], False, [False] * data.shape[1], isFitness=isFitness)
     # Convert indices back to original data space

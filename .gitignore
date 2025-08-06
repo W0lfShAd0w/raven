@@ -66,6 +66,7 @@ tests/framework/ROM/TimeSeries/ARMA/InterpolatedMaxCycles/
 tests/framework/ROM/TimeSeries/SyntheticHistory/LogARMA/
 tests/framework/ROM/TimeSeries/SyntheticHistory/VARMA/
 tests/framework/ROM/TimeSeries/SyntheticHistory/ZeroFilterDiscontinuous/
+*.xml.bak
 
 # hpc
 node_*[0-9]
