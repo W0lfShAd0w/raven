@@ -27,6 +27,7 @@
     <WorkingDir>./</WorkingDir>
     <Sequence>optimize, collect_final, print</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Steps>

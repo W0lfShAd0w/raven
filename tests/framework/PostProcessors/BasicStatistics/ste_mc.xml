@@ -4,6 +4,7 @@
     <WorkingDir>ste</WorkingDir>
     <Sequence>SamplingMirrowModelMC,PP1mc</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <TestInfo>
@@ -12,7 +13,7 @@
     <created>2018-12-13</created>
     <classesTested>PostProcessors.BasicStatistics</classesTested>
     <description>
-        This test checks standard error calculations of statistics moments in basic statistics 
+        This test checks standard error calculations of statistics moments in basic statistics
         using Monte Carlo samples.
     </description>
     <revisions>

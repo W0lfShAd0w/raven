@@ -25,6 +25,7 @@
     <WorkingDir>circle</WorkingDir>
     <Sequence>sample,adapt</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Steps>

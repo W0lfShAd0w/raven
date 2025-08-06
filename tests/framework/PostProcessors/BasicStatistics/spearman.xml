@@ -4,6 +4,7 @@
     <WorkingDir>basicStatsSpearman</WorkingDir>
     <batchSize>1</batchSize>
     <Sequence>sample,PP</Sequence>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <TestInfo>

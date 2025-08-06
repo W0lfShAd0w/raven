@@ -40,6 +40,7 @@ from . import OutStreams
 from .JobHandler import JobHandler
 from .utils import utils, TreeStructure, xmlUtils, mathUtils
 from .utils.utils import ParallelLibEnum
+from .utils.randomUtils import randomSeed
 from . import Decorators
 from .Application import __QtAvailable
 from .Interaction import Interaction
@@ -736,6 +737,10 @@ class Simulation(MessageUser):
         if modeName in self.__modeHandlerDict:
           self.raiseAWarning(f"duplicate mode definition {modeName}")
         self.__modeHandlerDict[modeName] = module.__dict__[modeClass]
+      elif element.tag == 'globalSeed': #this is needed for reproducibility in case the RNG is called before a standard seeding step.
+        globalSeed = int(element.text)
+        self.raiseADebug('Setting RAVEN RNG seed to',globalSeed)
+        randomSeed(globalSeed) #Reinstance the global generator with the requested seed.
       else:
         self.raiseAnError(IOError, f'RunInfo element "{element.tag}" unknown!')
 

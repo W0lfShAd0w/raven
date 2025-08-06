@@ -26,6 +26,7 @@
     <Sequence>readIn,ARMATrain,runARMA,writeOut</Sequence>
     <batchSize>2</batchSize>
     <internalParallel>True</internalParallel>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Files>

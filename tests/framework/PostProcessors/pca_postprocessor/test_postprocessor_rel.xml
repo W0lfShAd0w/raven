@@ -4,6 +4,7 @@
     <WorkingDir>relCov</WorkingDir>
     <Sequence>modelRun,computeRank</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <TestInfo>

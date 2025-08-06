@@ -18,6 +18,7 @@
     <Sequence>FirstMRun</Sequence>
     <batchSize>5</batchSize>
     <expectedTime>0:10:0</expectedTime>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Files>

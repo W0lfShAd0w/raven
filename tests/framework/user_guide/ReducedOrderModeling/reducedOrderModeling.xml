@@ -9,6 +9,7 @@
     </Sequence>
     <WorkingDir>ROMConstruction</WorkingDir>
     <batchSize>3</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <TestInfo>

@@ -20,6 +20,7 @@
     <WorkingDir>MultipleFourier</WorkingDir>
     <Sequence>read,train,sample,write</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Steps>

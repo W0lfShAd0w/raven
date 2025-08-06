@@ -20,6 +20,7 @@
     <WorkingDir>Interpolated</WorkingDir>
     <Sequence>read, train, print, sample</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Steps>

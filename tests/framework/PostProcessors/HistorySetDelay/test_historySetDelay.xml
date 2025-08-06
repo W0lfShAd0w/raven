@@ -17,6 +17,7 @@
     <WorkingDir>HistorySetDelay</WorkingDir>
     <Sequence>load, delay</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Files>

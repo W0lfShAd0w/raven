@@ -28,6 +28,7 @@
     <WorkingDir>test_categorical/</WorkingDir>
     <Sequence>MCrun,PP_MC,GridRun,PP_Grid, OutStreams</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Steps>

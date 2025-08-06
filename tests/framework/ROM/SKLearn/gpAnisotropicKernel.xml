@@ -27,30 +27,31 @@
       resample,
       plot
     </Sequence>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Steps>
     <MultiRun name="sample" sleepTime="1e-5">
-    <Input class="DataObjects" type="PointSet">dummyIN</Input>
-    <Model class="Models" type="ExternalModel">foo</Model>
-    <Sampler class="Samplers" type="Grid">gridSampler</Sampler>
-    <Output class="DataObjects" type="PointSet">trainingData</Output>
+      <Input class="DataObjects" type="PointSet">dummyIN</Input>
+      <Model class="Models" type="ExternalModel">foo</Model>
+      <Sampler class="Samplers" type="Grid">gridSampler</Sampler>
+      <Output class="DataObjects" type="PointSet">trainingData</Output>
     </MultiRun>
     <MultiRun name="resample" sleepTime="1e-5">
-    <Input class="DataObjects" type="PointSet">dummyIN</Input>
-    <Model class="Models" type="ROM">gpROM</Model>
-    <Sampler class="Samplers" type="Grid">gridSampler</Sampler>
-    <Output class="DataObjects" type="PointSet">outData</Output>
-    <Output class="OutStreams" type="Print">outData</Output>
+      <Input class="DataObjects" type="PointSet">dummyIN</Input>
+      <Model class="Models" type="ROM">gpROM</Model>
+      <Sampler class="Samplers" type="Grid">gridSampler</Sampler>
+      <Output class="DataObjects" type="PointSet">outData</Output>
+      <Output class="OutStreams" type="Print">outData</Output>
     </MultiRun>
     <RomTrainer name="train">
-    <Input class="DataObjects" type="PointSet">trainingData</Input>
-    <Output class="Models" type="ROM">gpROM</Output>
+      <Input class="DataObjects" type="PointSet">trainingData</Input>
+      <Output class="Models" type="ROM">gpROM</Output>
     </RomTrainer>
     <IOStep name="plot">
-    <Input class="DataObjects" type="PointSet">trainingData</Input>
-    <Input class="DataObjects" type="PointSet">outData</Input>
-    <Output class="OutStreams" type="Plot">plotGPAnisotropic</Output>
+      <Input class="DataObjects" type="PointSet">trainingData</Input>
+      <Input class="DataObjects" type="PointSet">outData</Input>
+      <Output class="OutStreams" type="Plot">plotGPAnisotropic</Output>
     </IOStep>
   </Steps>
 
@@ -79,7 +80,6 @@
       <filename>outGPAnisotropic</filename>
       <what>input,output,metadata</what>
     </Print>
-
     <Plot name="plotGPAnisotropic">
       <plotSettings>
         <plot>

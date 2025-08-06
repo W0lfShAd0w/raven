@@ -4,6 +4,7 @@
     <WorkingDir>LHSValue</WorkingDir>
     <Sequence>LHSRun,Dump,PP</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <TestInfo>

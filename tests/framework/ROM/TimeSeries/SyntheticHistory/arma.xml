@@ -17,6 +17,7 @@
     <WorkingDir>ARMA</WorkingDir>
     <Sequence>read, train, print, serialize, sample</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Steps>

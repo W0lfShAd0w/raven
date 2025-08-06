@@ -4,7 +4,9 @@
     <WorkingDir>gridPCAValue</WorkingDir>
     <Sequence>gridRun,Dump</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
+
   <TestInfo>
     <name>framework/pca_grid/gridPCAValue</name>
     <author>wangc</author>

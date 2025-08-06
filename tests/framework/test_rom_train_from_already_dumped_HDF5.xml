@@ -26,6 +26,7 @@
     <WorkingDir>test_rom_trainer</WorkingDir>
     <Sequence>test_extract_for_rom_trainer,test_rom_trainer,rom_MC</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Distributions>

@@ -32,6 +32,7 @@
       train,
       resample
     </Sequence>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Models>

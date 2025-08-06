@@ -4,6 +4,7 @@
     <WorkingDir>Basic</WorkingDir>
     <Sequence>Sample,Process_min,Process_max,Process_index</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <TestInfo>
@@ -35,10 +36,9 @@
       <criterion> max </criterion>
     </PostProcessor>
     <PostProcessor name="PPindex" subType="SampleSelector" verbosity="debug">
-      <criterion value='3'> index </criterion>
+      <criterion value="3"> index </criterion>
     </PostProcessor>
   </Models>
-
 
   <Distributions>
     <Normal name="x0_distrib">

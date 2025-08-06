@@ -24,6 +24,7 @@
     <RemoteRunCommand>raven_qsub_command.sh</RemoteRunCommand>
     <mode>pbsdsh</mode>
     <JobName>test_qsub</JobName>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Files>

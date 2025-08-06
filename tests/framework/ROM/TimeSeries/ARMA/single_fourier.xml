@@ -17,6 +17,7 @@
     <WorkingDir>SingleFourier</WorkingDir>
     <Sequence>readIn,ARMATrain,runARMA,writeOut</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Files>

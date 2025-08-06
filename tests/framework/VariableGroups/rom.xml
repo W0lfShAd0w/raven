@@ -4,6 +4,7 @@
     <WorkingDir>ROMs</WorkingDir>
     <Sequence>sample,train,samprom,print</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <TestInfo>

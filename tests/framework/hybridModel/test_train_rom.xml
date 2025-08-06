@@ -18,6 +18,7 @@
     <Sequence>runModel, runHybridModel</Sequence>
     <batchSize>1</batchSize>
     <internalParallel>False</internalParallel>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Distributions>

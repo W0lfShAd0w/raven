@@ -16,6 +16,7 @@
   <RunInfo>
     <WorkingDir>Basic</WorkingDir>
     <Sequence>load, process</Sequence>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Steps>

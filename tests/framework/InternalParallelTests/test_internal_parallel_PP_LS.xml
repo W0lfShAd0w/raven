@@ -26,6 +26,7 @@
     <Sequence>ExternalModelMC,ComputeLimitSurfacePositiveNegative,ComputeLimitSurfaceIntegralWeighted,ComputeLimitSurfaceIntegralUnWeighted</Sequence>
     <batchSize>5</batchSize>
     <parallelMethod>distributed</parallelMethod>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Models>

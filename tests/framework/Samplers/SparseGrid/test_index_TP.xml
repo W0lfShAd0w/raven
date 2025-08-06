@@ -4,7 +4,9 @@
     <WorkingDir>grid</WorkingDir>
     <Sequence>TPmake,TPtrain,TPtest,TPprint</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
+
   <TestInfo>
     <name>framework/Samplers/SparseGrid/tensorPrductGrid</name>
     <author>talbpaul</author>

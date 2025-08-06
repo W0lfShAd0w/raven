@@ -4,7 +4,9 @@
     <WorkingDir>ExternalNodes</WorkingDir>
     <Sequence>sample,print</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
+
   <TestInfo>
     <name>framework/VariableGroups/ExternalNodes</name>
     <author>talbpaul</author>

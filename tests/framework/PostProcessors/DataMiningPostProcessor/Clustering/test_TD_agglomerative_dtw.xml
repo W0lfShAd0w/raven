@@ -21,6 +21,7 @@
     <WorkingDir>agglomerative_dtw</WorkingDir>
     <Sequence>FirstMRun,plotAllHists,clustering,filter0,filter1</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Steps>

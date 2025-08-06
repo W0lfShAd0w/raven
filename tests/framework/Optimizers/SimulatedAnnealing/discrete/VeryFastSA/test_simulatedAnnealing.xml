@@ -23,10 +23,12 @@
   <RunInfo>
     <WorkingDir>.</WorkingDir>
     <Sequence>optimize, print</Sequence>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Steps>
-    <MultiRun name="optimize"><!--re-seeding="032877" 120504,,120504,080510-->
+    <MultiRun name="optimize">
+      <!--re-seeding=&quot;032877&quot; 120504,,120504,080510-->
       <Input class="DataObjects" type="PointSet">placeholder</Input>
       <Model class="Models" type="ExternalModel">beale</Model>
       <Optimizer class="Optimizers" type="SimulatedAnnealing">simOpt</Optimizer>
@@ -43,7 +45,7 @@
   </Steps>
 
   <Distributions>
-    <UniformDiscrete name='beale_dist'>
+    <UniformDiscrete name="beale_dist">
       <lowerBound>-4.5</lowerBound>
       <upperBound>4.5</upperBound>
       <nPoints>1000</nPoints>
@@ -111,4 +113,5 @@
       <clusterLabel>trajID</clusterLabel>
     </Print>
   </OutStreams>
+
 </Simulation>

@@ -17,7 +17,9 @@
     <WorkingDir>Adaptive</WorkingDir>
     <Sequence>make,train,rom_data,print</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
+
   <Steps>
     <MultiRun name="make" sleepTime="1e-4" verbosity="silent">
       <Input class="DataObjects" type="PointSet">dummyIN</Input>

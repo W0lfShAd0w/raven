@@ -16,6 +16,7 @@
   <RunInfo>
     <WorkingDir>Simple</WorkingDir>
     <Sequence>optimize,print</Sequence>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Steps>
@@ -35,11 +36,11 @@
   <Optimizers>
     <GradientDescent name="opter">
       <objective>ans</objective>
-      <variable name='x'>
+      <variable name="x">
         <distribution>beale_domain</distribution>
         <initial>0</initial>
       </variable>
-      <variable name='y'>
+      <variable name="y">
         <distribution>beale_domain</distribution>
         <initial>0</initial>
       </variable>
@@ -64,7 +65,7 @@
   </Optimizers>
 
   <Distributions>
-    <Uniform name='beale_domain'>
+    <Uniform name="beale_domain">
       <lowerBound>-4.5</lowerBound>
       <upperBound>4.5</upperBound>
     </Uniform>

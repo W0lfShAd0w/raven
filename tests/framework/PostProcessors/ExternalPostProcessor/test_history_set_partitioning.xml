@@ -21,6 +21,7 @@
     <WorkingDir>testHistorySet</WorkingDir>
     <Sequence>FirstMRun,applyFunctions</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <!-- The external methods will be defined in the files pointed to by these guys -->

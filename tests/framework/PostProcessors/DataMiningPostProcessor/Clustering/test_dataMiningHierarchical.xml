@@ -21,6 +21,7 @@
     <WorkingDir>Hierarchical</WorkingDir>
     <Sequence>readIn,Hierarchical,output</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Files>
