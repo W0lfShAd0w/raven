@@ -738,7 +738,7 @@ class Simulation(MessageUser):
           self.raiseAWarning(f"duplicate mode definition {modeName}")
         self.__modeHandlerDict[modeName] = module.__dict__[modeClass]
       elif element.tag == 'globalSeed': #this is needed for reproducibility in case the RNG is called before a standard seeding step.
-        globalSeed = int(element.text)
+        globalSeed = int(element.text) if element.text.lower() != 'none' else None
         self.raiseADebug('Setting RAVEN RNG seed to',globalSeed)
         randomSeed(globalSeed) #Reinstance the global generator with the requested seed.
       else:
