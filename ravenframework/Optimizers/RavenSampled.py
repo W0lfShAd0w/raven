@@ -319,7 +319,7 @@ class RavenSampled(Optimizer):
     # so get the correct-signed value into the realization
 
     for objVar in self._objectiveVar:
-      rlz[objVar] *= self._objMult[objVar]
+      rlz[objVar] *= self._objMult[objVar] #multiply by -1 to maximize obj or by 1 to minimize obj
     # TODO FIXME let normalizeData work on an xr.DataSet (batch) not just a dictionary!
     rlz = self.normalizeData(rlz)
     self._useRealization(info, rlz)

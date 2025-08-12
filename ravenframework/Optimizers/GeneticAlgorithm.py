@@ -250,6 +250,7 @@
 # External Modules----------------------------------------------------------------------------------
 from collections import deque, defaultdict
 import numpy as np
+from copy import deepcopy
 from scipy.special import comb
 import xarray as xr
 # External Modules End------------------------------------------------------------------------------
@@ -562,6 +563,11 @@ class GeneticAlgorithm(RavenSampled):
         printPriority=108,
         descr=r""" shift: in case of logistic fitness, this is the shift in the exponential function for the onjective(s). \default{list of zeros}""")
     fitness.addSub(shift)
+    normalizeFitness = InputData.parameterInputFactory('normalize', strictMode=False,
+        contentType=InputTypes.StringType,
+        printPriority=108,
+        descr=r""" normalize: input and output data will be normalized prior to calculating fitness for each iteration of the optimizer. \default{zscore}""")
+    fitness.addSub(normalizeFitness)
     GAparams.addSub(fitness)
     specs.addSub(GAparams)
 
@@ -700,6 +706,14 @@ class GeneticAlgorithm(RavenSampled):
     else:
       self._penaltyCoeff = fitnessNode.findFirst('b').value if fitnessNode.findFirst('b') else None
       self._objCoeff = fitnessNode.findFirst('a').value if fitnessNode.findFirst('a') else None
+    self._normalizeFitness = fitnessNode.findFirst('normalize').value if fitnessNode.findFirst('normalize') else None
+    if not self._normalizeFitness:
+      self._normalizeFitness = False
+    elif self._normalizeFitness.lower() == 'true':
+      self._normalizeFitness = 'zscore' #default to zscore normalization
+    elif self._normalizeFitness.lower() not in ['maxmin','zscore']:
+      self.raiseAnError(IOError, "Requested fitness normalization type not supported. Available options include 'maxmin' and 'zscore'.")
+
     ####################################################################################
     # constraint node                                                                  #
     ####################################################################################
@@ -797,13 +811,13 @@ class GeneticAlgorithm(RavenSampled):
     self.incrementIteration(traj)
 
     files = self.assemblerDict['Files']
-    ## add checker/here 
+    ## add checker/here
     EQflag = any("EQinput" in sublist for sublist in files)
     if EQflag:
       self._EQcheckfile = files
     else:
       self._EQcheckfile = None
-    
+
 
     population = datasetToDataArray(rlz, list(self.toBeSampled))
 
@@ -814,8 +828,35 @@ class GeneticAlgorithm(RavenSampled):
     # 1. Check constraint violations and calculate the constraint function g (<0 if the constraint is violated)
     g = constraintHandling(self, info, rlz, population, objectiveVal, multiObjective=self._isMultiObjective)
 
+    #!TODO: if _normalizeFitness, fetch all objective and constraint names, calculate zscore/minmax values, normalize objective values and constraint function results, pass to _fitnessInstance
+    norm_rlz = deepcopy(rlz)
+    if self._normalizeFitness:
+      # collect variable names to normalize
+      constrVarsList = self._constraintFunctions + self._impConstraintFunctions
+      varsToNormalize = []
+      for x in constrVarsList:
+        varsToNormalize += x.parameterNames()
+      varsToNormalize = set(varsToNormalize + self._objectiveVar)
+      # calculate normalization parameters and store for later
+      self.normScores = {}
+      for var in varsToNormalize:
+        if self._normalizeFitness == "zscore":
+          self.normScores[var] = (np.mean(rlz[var].to_dataframe().values), np.std(rlz[var].to_dataframe().values))
+          # normalize values for fitness calc
+          for i in range(len(rlz[var])):
+            norm_rlz[var][i] = (rlz[var][i] - self.normScores[var][0]) / self.normScores[var][1] #perform zscore normalization
+      # normalize evaluated constraint differences
+      for i in range(len(g)):
+        for j in range(len(constrVarsList)):
+          #penalty represents a Delta applied to the obj value; i.e. (C_k - mu)/std - (C_i - mu)/std = (C_k - C_i)/std
+          #  If the constraint uses multiple variables/units, there's no easy way to handle it so we'll just assume the
+          #  first variable is the primary one.
+          g[i][j] = g[i][j] / self.normScores[constrVarsList[j].parameterNames()[0]][1]
+          if np.isnan(g[i][j]):
+            g[i][j] = 0.0
+
     # 2. Compute fitness for the offspring
-    populationFitness = self._fitnessInstance(rlz,
+    populationFitness = self._fitnessInstance(norm_rlz,
                                              objVar=self._objectiveVar,
                                              a=self._objCoeff,
                                              b=self._penaltyCoeff,

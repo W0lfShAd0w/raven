@@ -35,7 +35,7 @@ mh = getMessageHandler()
 #               We should make this method flexible to accept different set of params
 
 _defaultObjectiveScaling = 1.0
-_defaultPenaltyScaling = 10.0
+_defaultPenaltyScaling = 1.0
 
 # @profile
 def invLinear(rlz, **kwargs):
@@ -94,8 +94,9 @@ def feasibleFirst(rlz, **kwargs):
 
   .. math::
   fitness = \[ \\begin{cases}
-                -obj & g_j(x)\\geq 0 \\forall j \\
-                -obj_{worst} - \\Sigma_{j=1}^{J}<g_j(x)> & otherwise \\
+                -a_{i} \times obj & g_j(x)\\geq 0 \\forall j \\
+                -a_{i} \times obj_{worst} + \\Sigma_{j=1}^{J}b_{j} \times min<g_j(x)> & otherwise \\
+                min(0,g_j(x))
                 \\end{cases}
             \];
   @ In, rlz, xr.Dataset, containing the evaluation of a set of individuals
@@ -109,14 +110,14 @@ def feasibleFirst(rlz, **kwargs):
   @ Out, fitnessSet, xr.Dataset, the fitness function for the given population.
   """
   objVar = kwargs['objVar']
-  a = [_defaultObjectiveScaling] * len(objVar) if kwargs.get('a') is None else kwargs['a']  # Scaling factors for objectives
-  b = [_defaultPenaltyScaling] * len(objVar) if kwargs.get('b') is None else kwargs['b']  # Penalty scaling factors
-  if len(a) != len(objVar):
-    mh.error("fitness", IOError, f"Objective scaling factors {a} should have length {len(objVar)}")
-  if len(b) != len(objVar):
-    mh.error("fitness", IOError, f"Penalty scaling factors {b} should have length {len(objVar)}")
   constraintNum = kwargs['constraintNum']
   g = kwargs['constraintFunction'] if constraintNum > 0 else None  # Constraint evaluations
+  a = [_defaultObjectiveScaling] * len(objVar) if kwargs.get('a') is None else kwargs['a']  # Scaling factors for objectives
+  b = [_defaultPenaltyScaling] * len(constraintNum) if kwargs.get('b') is None else kwargs['b']  # Penalty scaling factors
+  if len(a) != len(objVar):
+    mh.error("fitness", IOError, f"Objective scaling factors {a} should have length {len(objVar)}")
+  if len(b) != constraintNum:
+    mh.error("fitness", IOError, f"Penalty scaling factors {b} should have length {constraintNum}")
   fitnessSet = xr.Dataset()
   # For each objective
   for i, obj in enumerate(objVar):
@@ -130,9 +131,9 @@ def feasibleFirst(rlz, **kwargs):
           # if constraints are violated
           else:  # Penalize constraint violations
               fit = -a[i] * worstObj  # Start with the worst objective value
-              for constInd in range(g.data.shape[1]):
-                  violation = max(0, -g.data[ind, constInd])
-                  fit -= b[i] * violation
+              for constInd in range(constraintNum):
+                  violation = min(0, g.data[ind, constInd])
+                  fit += b[constInd] * violation #add the negative penalty
           fitness[ind] = fit
       # Add the fitness for the current objective to the dataset
       fitnessSet[obj] = xr.DataArray(fitness, dims=['chromosome'], coords={'chromosome': np.arange(len(data))})
