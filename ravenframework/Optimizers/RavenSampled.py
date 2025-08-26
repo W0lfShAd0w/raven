@@ -324,7 +324,7 @@ class RavenSampled(Optimizer):
     rlz = self.normalizeData(rlz)
     self._useRealization(info, rlz)
 
-  def finalizeSampler(self, failedRuns):
+  def finalizeSampler(self, failedRuns): #!TODO: is this unused??
     """
       Last tasks to perform before Step is finished.
       @ In, failedRuns, list, runs that failed as part of this sampling
