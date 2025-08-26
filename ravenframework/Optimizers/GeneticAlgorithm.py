@@ -881,7 +881,7 @@ class GeneticAlgorithm(RavenSampled):
       else:
         if self.counter <= 1:
           # offspringObjsVals for Rank and CD calculation
-          fitVal = datasetToDataArray(self.fitness, self._objectiveVar).data
+          fitVal = datasetToDataArray(populationFitness, self._objectiveVar).data
           offspringFitVals = fitVal.tolist()
     ## 5. Compute the rank of offsprings
           offSpringRank = frontUtils.rankNonDominatedFrontiers(np.array(offspringFitVals), isFitness=True)
@@ -903,9 +903,9 @@ class GeneticAlgorithm(RavenSampled):
                                    self.rank,
                                    self.crowdingDistance,
                                    self.objectiveVal,
-                                   self.fitness,
+                                   populationFitness,
                                    self.constraintsV)
-        self._resolveNewGeneration(traj, rlz, info)
+        self._resolveNewGeneration(traj, rlz, info, fitness=populationFitness)
 
   ## 7. Parent selection from population
       parents = self._parentSelectionInstance(self.population,
@@ -1047,8 +1047,8 @@ class GeneticAlgorithm(RavenSampled):
           rlzDict['batchId'] = self.batchId
           rlzDict['rank'] = np.atleast_1d(self.rank.data)[i]
           rlzDict['CD'] = np.atleast_1d(self.crowdingDistance.data)[i]
-          for ind, fitName in enumerate(list(self.fitness.keys())):
-            rlzDict['FitnessEvaluation_'+fitName] = self.fitness[fitName].data[i]
+          for ind, fitName in enumerate(list(fitness.keys())):
+            rlzDict['FitnessEvaluation_'+fitName] = fitness[fitName].data[i]
           for ind, consName in enumerate([y.name for y in (self._constraintFunctions + self._impConstraintFunctions)]):
             rlzDict['ConstraintEvaluation_'+consName] = self.constraintsV.data[i,ind]
         else:
