@@ -709,10 +709,12 @@ class GeneticAlgorithm(RavenSampled):
     self._normalizeFitness = fitnessNode.findFirst('normalize').value if fitnessNode.findFirst('normalize') else None
     if not self._normalizeFitness:
       self._normalizeFitness = False
+    elif self._normalizeFitness.lower() == 'none':
+      self._normalizeFitness = None #allow the user to specify NoneType in the string input
     elif self._normalizeFitness.lower() == 'true':
       self._normalizeFitness = 'zscore' #default to zscore normalization
     elif self._normalizeFitness.lower() not in ['maxmin','zscore']:
-      self.raiseAnError(IOError, "Requested fitness normalization type not supported. Available options include 'maxmin' and 'zscore'.")
+      self.raiseAnError(IOError, "Requested fitness normalization type not supported. Available options include 'maxmin' and 'zscore'.") #!TODO: maxmin has not yet been implemented.
 
     ####################################################################################
     # constraint node                                                                  #
@@ -825,10 +827,10 @@ class GeneticAlgorithm(RavenSampled):
     for i in range(len(self._objectiveVar)):
       objectiveVal.append(list(np.atleast_1d(rlz[self._objectiveVar[i]].data)))
 
-    # 1. Check constraint violations and calculate the constraint function g (<0 if the constraint is violated)
+  ## 1. Check constraint violations and calculate the constraint function g (<0 if the constraint is violated)
     g = constraintHandling(self, info, rlz, population, objectiveVal, multiObjective=self._isMultiObjective)
 
-    #!TODO: if _normalizeFitness, fetch all objective and constraint names, calculate zscore/minmax values, normalize objective values and constraint function results, pass to _fitnessInstance
+  ## 2. Normalize values for fitness function evaluation, if requested.
     norm_rlz = deepcopy(rlz)
     if self._normalizeFitness:
       # collect variable names to normalize
@@ -845,6 +847,8 @@ class GeneticAlgorithm(RavenSampled):
           # normalize values for fitness calc
           for i in range(len(rlz[var])):
             norm_rlz[var][i] = (rlz[var][i] - self.normScores[var][0]) / self.normScores[var][1] #perform zscore normalization
+            if np.isnan(norm_rlz[var][i]):
+              norm_rlz[var][i] = 0.0
       # normalize evaluated constraint differences
       for i in range(len(g)):
         for j in range(len(constrVarsList)):
@@ -855,7 +859,7 @@ class GeneticAlgorithm(RavenSampled):
           if np.isnan(g[i][j]):
             g[i][j] = 0.0
 
-    # 2. Compute fitness for the offspring
+  ## 3. Compute fitness for the offspring
     populationFitness = self._fitnessInstance(norm_rlz,
                                              objVar=self._objectiveVar,
                                              a=self._objCoeff,
@@ -865,26 +869,26 @@ class GeneticAlgorithm(RavenSampled):
                                              constraintNum=self._numOfConst,
                                              type=self._minMax)
 
-    # Single-objective post-processing (if needed)
-    if not self._isMultiObjective:
-        self._collectOptPoint(rlz, populationFitness, objectiveVal[0], g)
-        self._resolveNewGeneration(traj, rlz, info, objectiveVal[0], populationFitness, g)
-
-    # 3. Survivor selection
     if self._activeTraj:
+  ## 4. Survivor selection
       survivorSelection =  survivorSelectionProcess.multiObjSurvivorSelect if self._isMultiObjective else  survivorSelectionProcess.singleObjSurvivorSelect
       survivorSelection(self, info, rlz, traj, population, populationFitness, objectiveVal, g)
-      if self._isMultiObjective:
+  ## Single-objective post-processing
+      if not self._isMultiObjective:
+          self._collectOptPoint(rlz, populationFitness, objectiveVal[0], g)
+          self._resolveNewGeneration(traj, rlz, info, objectiveVal[0], populationFitness, g)
+  ## Multi-objective post-processing
+      else:
         if self.counter <= 1:
           # offspringObjsVals for Rank and CD calculation
           fitVal = datasetToDataArray(self.fitness, self._objectiveVar).data
           offspringFitVals = fitVal.tolist()
-          # 4. Compute the rank of offsprings
+    ## 5. Compute the rank of offsprings
           offSpringRank = frontUtils.rankNonDominatedFrontiers(np.array(offspringFitVals), isFitness=True)
           self.rank = xr.DataArray(offSpringRank,
                                        dims=['rank'],
                                        coords={'rank': np.arange(np.shape(offSpringRank)[0])})
-          # 5. Compute the crowding distance of offsprings
+    ## 6. Compute the crowding distance of offsprings
           offSpringCD = frontUtils.crowdingDistance(rank=offSpringRank,
                                                               popSize=len(offSpringRank),
                                                               fitness=np.array(offspringFitVals))
@@ -903,8 +907,7 @@ class GeneticAlgorithm(RavenSampled):
                                    self.constraintsV)
         self._resolveNewGeneration(traj, rlz, info)
 
-
-      # 6. Parent selection from population
+  ## 7. Parent selection from population
       parents = self._parentSelectionInstance(self.population,
                                               variables=list(self.toBeSampled),
                                               fitness=self.fitness,
@@ -913,25 +916,23 @@ class GeneticAlgorithm(RavenSampled):
                                               rank=self.rank,
                                               crowdDistance=self.crowdingDistance,
                                               objVar=self._objectiveVar,
-                                              isMultiObjective = self._isMultiObjective,
-                                              )
+                                              isMultiObjective = self._isMultiObjective)
 
-      # 7. Reproduction
+  ## 8. Reproduction
 	  ### Modified with EQ cycle
-      # 7.1 Crossover
+      # 8.1 Crossover
       childrenXover = self._crossoverInstance(parents=parents,
                                               variables=list(self.toBeSampled),
                                               crossoverProb=self._crossoverProb,
                                               points=self._crossoverPoints, EQfiles = self._EQcheckfile)
-
-      # 7.2 Mutation
+      # 8.2 Mutation
       childrenMutated = self._mutationInstance(offSprings=childrenXover,
                                                distDict=self.distDict,
                                                locs=self._mutationLocs,
                                                mutationProb=self._mutationProb,
                                                variables=list(self.toBeSampled), EQfiles = self._EQcheckfile)
 
-      # 8. repair/replacement
+  ## 9. repair/replacement
       # Repair should only happen if multiple genes in a single chromosome have the same values (),
       # and at the same time the sampling of these genes should be with Out replacement.
       needsRepair = False
@@ -948,13 +949,13 @@ class GeneticAlgorithm(RavenSampled):
         children = childrenMutated
 
       # keeping the population size constant by ignoring the excessive children
-      children = children[:self._populationSize, :]
+      children = children[:self._populationSize, :] #!TODO: implement elitism by cloning to "children" before step 3 and then extending with reproduced offspring in step 9.
       daChildren = xr.DataArray(children,
                                 dims=['chromosome','Gene'],
                                 coords={'chromosome': np.arange(np.shape(children)[0]),
                                         'Gene':list(self.toBeSampled)})
 
-      # 9. Submit children batch
+  ## 10. Submit children batch
       # Submit children coordinates (x1,...,xm), i.e., self.childrenCoordinates
       for i in range(self.batch):
         newRlz = {}
@@ -1035,13 +1036,14 @@ class GeneticAlgorithm(RavenSampled):
       self.raiseADebug("### rlz.sizes['RAVEN_sample_ID'] = {}".format(rlz.sizes['RAVEN_sample_ID']))
       for i in range(rlz.sizes['RAVEN_sample_ID']):
         if self._isMultiObjective:
-          varList = self._solutionExport.getVars('input') + self._solutionExport.getVars('output') + list(self.toBeSampled.keys())
-          varList = [var for var in varList if var not in self._objectiveVar]
+          # varList = self._solutionExport.getVars('input') + self._solutionExport.getVars('output') + list(self.toBeSampled.keys())
+          # varList = [var for var in varList if var not in self._objectiveVar]
+          varList = set(self._solutionExport.getVars() + list(self.toBeSampled))
           rlzDict = dict((var,np.atleast_1d(rlz[var].data)[i]) for var in set(varList) if var in rlz.data_vars)
-          rlzDict.update(self.population.isel(chromosome=i).to_series().to_dict()) #make sure none of the chromosomes were missed from self.toBeSampled.
-          for j in range(len(self._objectiveVar)):
-            if self._objectiveVar[j] not in rlzDict:
-              rlzDict[self._objectiveVar[j]] = self.objectiveVal[j][i]
+          #!rlzDict.update(self.population.isel(chromosome=i).to_series().to_dict()) #make sure none of the chromosomes were missed from self.toBeSampled.
+          # for j in range(len(self._objectiveVar)):
+          #   if self._objectiveVar[j] not in rlzDict:
+          #     rlzDict[self._objectiveVar[j]] = self.objectiveVal[j][i]
           rlzDict['batchId'] = self.batchId
           rlzDict['rank'] = np.atleast_1d(self.rank.data)[i]
           rlzDict['CD'] = np.atleast_1d(self.crowdingDistance.data)[i]

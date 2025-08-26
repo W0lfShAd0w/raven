@@ -14,21 +14,11 @@
 """
   Implementation of survivorSelection step for new generation
   selection process in Genetic Algorithm.
+  NOTE: this file only exists to call methods in survivorSelectors.py, making for a confusing and convoluted call stack. - rollnk
 
   Created Apr,3,2024
   @authors: Mohammad Abdo, Junyung Kim
 """
-# External Modules----------------------------------------------------------------------------------
-import numpy as np
-import xarray as xr
-from ravenframework.utils import frontUtils
-# External Modules End------------------------------------------------------------------------------
-
-# Internal Modules----------------------------------------------------------------------------------
-from ...utils.gaUtils import dataArrayToDict, datasetToDataArray
-# Internal Modules End------------------------------------------------------------------------------
-
-# @profile
 
 def singleObjSurvivorSelect(self, info, rlz, traj, offSprings, offSpringFitness, objectiveVal, g):
   """
