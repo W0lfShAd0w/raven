@@ -51,6 +51,7 @@ def invLinear(rlz, **kwargs):
   @ In, rlz, xr.Dataset, containing the evaluation of a set of individuals
   @ In, kwargs, dict, dictionary of parameters:
         objVar, list of strings or single string, name(s) of the objective variable(s)
+        constraintNum, int, number of constraints
         a, list of floats, linear coefficient(s) for the objective function (default = 1.0 for each objective)
         b, list of floats, linear coefficient(s) for the penalty measure (default = 1.0 for each objective)
         constraintFunction, xr.DataArray, measuring the severity of the constraint violation.
@@ -58,12 +59,13 @@ def invLinear(rlz, **kwargs):
   @ Out, fitnessSet, xr.Dataset, the fitness function for the given population.
   """
   objVar = kwargs['objVar']
-  g = kwargs['constraintFunction'] if 'constraintFunction' in kwargs else None  # Constraint evaluations
-  a = np.array(kwargs.get('a', _defaultObjectiveScaling))
+  constraintNum = kwargs['constraintNum']
+  g = kwargs['constraintFunction'] if constraintNum > 0 else None  # Constraint evaluations
+  a = np.array(kwargs.get('a')) if kwargs.get('a') is not None else np.array(_defaultObjectiveScaling)
   a = np.array([a] * len(objVar)) if not a.shape else a # Scaling factors for objectives
   if a.shape != (len(objVar),):
     mh.error("fitness", IOError, f"Objective scaling factors {a} should have length {len(objVar)}")
-  b = np.array(kwargs.get('b', _defaultPenaltyScaling))
+  b = np.array(kwargs.get('b')) if kwargs.get('b') is not None else np.array(_defaultPenaltyScaling)
   try:
     b = np.array([[b] * constraintNum] * len(objVar)) if not b.shape \
         else (np.array([b] * len(objVar)) if len(b.shape) == 1 else np.reshape(b, (len(objVar),constraintNum))) # Penalty scaling factors
@@ -117,11 +119,11 @@ def feasibleFirst(rlz, **kwargs):
   objVar = kwargs['objVar']
   constraintNum = kwargs['constraintNum']
   g = kwargs['constraintFunction'] if constraintNum > 0 else None  # Constraint evaluations
-  a = np.array(kwargs.get('a', _defaultObjectiveScaling))
+  a = np.array(kwargs.get('a')) if kwargs.get('a') is not None else np.array(_defaultObjectiveScaling)
   a = np.array([a] * len(objVar)) if not a.shape else a # Scaling factors for objectives
   if a.shape != (len(objVar),):
     mh.error("fitness", IOError, f"Objective scaling factors {a} should have length {len(objVar)}")
-  b = np.array(kwargs.get('b', _defaultPenaltyScaling))
+  b = np.array(kwargs.get('b')) if kwargs.get('b') is not None else np.array(_defaultPenaltyScaling)
   try:
     b = np.array([[b] * constraintNum] * len(objVar)) if not b.shape \
         else (np.array([b] * len(objVar)) if len(b.shape) == 1 else np.reshape(b, (len(objVar),constraintNum))) # Penalty scaling factors
