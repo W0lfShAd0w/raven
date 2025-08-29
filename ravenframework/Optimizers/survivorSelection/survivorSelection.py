@@ -42,6 +42,10 @@ def singleObjSurvivorSelect(self, info, rlz, traj, offSprings, offSpringFitness,
     @ In, objectiveVal, list, floats of objective values
     @ In, g, xr.DataArray, constraint data
   """
+  if individualFitness is not None:
+    for i in range(individuals.shape[0]):
+      self._sampledPopulationInfo[tuple(individuals[i].data)] = individualFitness.to_dataarray()[:,i]
+
   if self.counter > 1:
     self.population, self.fitness,\
     self.popAge,self.objectiveVal = self._survivorSelectionInstance(age=self.popAge,
@@ -69,6 +73,10 @@ def multiObjSurvivorSelect(self, info, rlz, traj, offSprings, offSpringFitness, 
     @ In, objectiveVal, list, values of the objectives (for ranking and crowding distance calculation)
     @ In, g, xr.DataArray, constraint data
   """
+  if individualFitness is not None:
+    for i in range(individuals.shape[0]):
+      self._sampledPopulationInfo[tuple(individuals[i].data)] = individualFitness.to_dataarray()[:,i]
+
   if self.counter > 1:
     self.population,self.rank, \
     self.popAge,self.crowdingDistance, \
