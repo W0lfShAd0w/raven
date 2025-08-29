@@ -385,7 +385,18 @@ class RavenSampled(Optimizer):
       self.raiseAnError(RuntimeError, f'There is no optimization history for traj {traj}! ' +
                         'Perhaps the Model failed?')
 
+    ## If any solution in the population has a higher fitness value than what is found in ._optPointHistory, add it to opt.
     opt = self._optPointHistory[traj][-1][0]
+    fitnessVars = [var for var in list(opt) if 'fitness' in var.lower()]
+    if hasattr(self,"_sampledPopulationInfo"):
+      for soln in self._sampledPopulationInfo:
+        if (self._sampledPopulationInfo[soln] > [max(opt[key]) for key in fitnessVars]).any(): #if any fitness value in soln is greater than the all corresponding fitness values in opt, this is True.
+          for indx in self._solutionExport._data[list(self._solutionExport._data)[0]]: #search the population data for the inputs in soln
+            if np.all(np.array(soln) == [self._solutionExport._data[key][indx].item() for key in self.toBeSampled]):
+              # add soln values from population data to opt
+              for key in list(opt):
+                opt[key].append(self._solutionExport._data[key][indx].item())
+              break #it shouldn't be possible, but this would fail silently if soln isn't found in the population data
 
     #Note: bestTraj == traj
     for i in range(len(np.atleast_1d(opt[self._objectiveVar[0]]))):
@@ -407,7 +418,6 @@ class RavenSampled(Optimizer):
       if bestPoint not in self._finals:
           self._updateSolutionExport(bestTraj, self.normalizeData(bestOpt), 'final', 'None')
           self._finals.append(bestPoint)
-
 
   def flush(self):
     """

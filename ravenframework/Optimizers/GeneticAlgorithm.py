@@ -358,6 +358,7 @@ class GeneticAlgorithm(RavenSampled):
     self._fitnessInstance = None                                 # instance of fitness
     self._repairInstance = None                                  # instance of repair
     self._canHandleMultiObjective = True                         # boolean indicator whether optimization is a sinlge-objective problem or a multi-objective problem
+    self._sampledPopulationInfo = {}                             # stores population and fitness info
 
   ##########################
   # Initialization Methods #
