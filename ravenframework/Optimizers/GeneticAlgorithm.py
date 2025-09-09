@@ -895,6 +895,7 @@ class GeneticAlgorithm(RavenSampled):
               self.currentPop_ages[i] = self.matingPop_ages[indx]
               break
 
+      currentPop_ranks = []; currentPop_CD = [] #local vars that is only used in multi-objective but must be initialized regardless
   ## Single-objective post-processing
       if not self._isMultiObjective:
           self._collectOptPoint(rlz, currentPop_fitness, currentPop_objvals[0], currentPop_g)
