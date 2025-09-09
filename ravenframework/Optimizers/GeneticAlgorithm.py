@@ -903,6 +903,27 @@ class GeneticAlgorithm(RavenSampled):
                                    self.constraintsV)
         self._resolveNewGeneration(traj, rlz, info)
 
+      currentPop_ranks = []; currentPop_CD = [] #local vars that is only used in multi-objective but must be initialized regardless
+  ## Single-objective post-processing
+      if not self._isMultiObjective:
+          self._collectOptPoint(rlz, currentPop_fitness, currentPop_objvals[0], currentPop_g)
+          self._resolveNewGeneration(traj, rlz, info, self.prevPop_inputs, currentPop_objvals[0], currentPop_fitness, currentPop_g)
+  ## Multi-objective post-processing
+      else:
+        # list for Rank and CD calculation
+        currentPop_fitsbysoln = datasetToDataArray(currentPop_fitness, self._objectiveVar).data.tolist()
+    ## 5. Compute the rank of current population
+        currentPop_ranks = frontUtils.rankNonDominatedFrontiers(np.array(currentPop_fitsbysoln), isFitness=True)
+        currentPop_ranks = xr.DataArray(currentPop_ranks,
+                                      dims=['rank'],
+                                      coords={'rank': np.arange(np.shape(currentPop_ranks)[0])})
+    ## 6. Compute the crowding distance of current population
+        currentPop_CD = frontUtils.crowdingDistance(rank=currentPop_ranks,
+                                                            popSize=len(currentPop_ranks),
+                                                            fitness=np.array(currentPop_fitsbysoln))
+        currentPop_CD = xr.DataArray(currentPop_CD,
+                                              dims=['CrowdingDistance'],
+                                              coords={'CrowdingDistance': np.arange(np.shape(currentPop_CD)[0])})
 
       # 6. Parent selection from population
       parents = self._parentSelectionInstance(self.population,

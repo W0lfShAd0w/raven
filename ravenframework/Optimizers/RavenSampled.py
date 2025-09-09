@@ -388,15 +388,16 @@ class RavenSampled(Optimizer):
     ## If any solution in the population has a higher fitness value than what is found in ._optPointHistory, add it to opt.
     opt = self._optPointHistory[traj][-1][0]
     fitnessVars = [var for var in list(opt) if 'fitness' in var.lower()]
+    self._solutionExport.asDataset() #empty _collector into _data
     if hasattr(self,"_sampledPopulationInfo"):
       for soln in self._sampledPopulationInfo:
         if (self._sampledPopulationInfo[soln] > [max(opt[key]) for key in fitnessVars]).any(): #if any fitness value in soln is greater than the all corresponding fitness values in opt, this is True.
-          for indx in self._solutionExport._data[list(self._solutionExport._data)[0]]: #search the population data for the inputs in soln
-            if np.all(np.array(soln) == [self._solutionExport._data[key][indx].item() for key in self.toBeSampled]):
-              # add soln values from population data to opt
-              for key in list(opt):
-                opt[key].append(self._solutionExport._data[key][indx].item())
-              break #it shouldn't be possible, but this would fail silently if soln isn't found in the population data
+            for indx in range(len(self._solutionExport._data[list(self._solutionExport._data)[0]])): #search the population data for the inputs in soln
+              if np.all(np.array(soln) == [self._solutionExport._data[key][indx].item() for key in self.toBeSampled]):
+                # add soln values from population data to opt
+                for key in list(opt):
+                  opt[key] = np.append(opt[key], self._solutionExport._data[key][indx].item())
+                break #it shouldn't be possible, but this would fail silently if soln isn't found in the population data
 
     #Note: bestTraj == traj
     for i in range(len(np.atleast_1d(opt[self._objectiveVar[0]]))):
@@ -690,6 +691,10 @@ class RavenSampled(Optimizer):
                      'rejectReason': rejectReason,
                      'modelRuns': self.counter
                     })
+    # add the contents of the realization
+    toExport.update(dict((var, rlz[var]) for var in rlz))
+
+    ## the following are sanity checks and data reformatting
     # optimal point input and output spaces
     for objVar in self._objectiveVar:
       objValue = rlz[objVar]*self._objMult[objVar]
@@ -697,11 +702,11 @@ class RavenSampled(Optimizer):
     toExport.update(self.denormalizeData(dict((var, rlz[var]) for var in self.toBeSampled)))
     # constants and functions
     toExport.update(self.constants)
-    toExport.update(dict((var, rlz[var]) for var in self.dependentSample if var in rlz))
+    toExport.update(dict((var, rlz[var]) for var in self.dependentSample if var in rlz)) #!TODO:redundant, remove.
     # additional from inheritors
     toExport.update(self._addToSolutionExport(traj, rlz, acceptable))
     # check for anything else that solution export wants that rlz might provide
-    for var in self._solutionExport.getVars():
+    for var in self._solutionExport.getVars(): #!TODO:redundant, remove.
       if var not in toExport and var in rlz:
         toExport[var] = rlz[var]
     # formatting
