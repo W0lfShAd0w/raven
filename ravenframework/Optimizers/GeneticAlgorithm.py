@@ -941,7 +941,7 @@ class GeneticAlgorithm(RavenSampled):
                                                 isMultiObjective = self._isMultiObjective)
 
   ## 8. Reproduction
-	  ### Modified with EQ cycle
+    ### Modified with EQ cycle
       # 8.1 Crossover
       childrenXover = self._crossoverInstance(parents=parents,
                                               variables=list(self.toBeSampled),
