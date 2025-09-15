@@ -223,13 +223,13 @@ class NumpyRNG:
   def seed(self, value):
     """
       Reseeds the RNG
-      @ In, value, int, RNG seed
+      @ In, value, int or NoneType, RNG seed
       @ Out, None
     """
     if value is not None:
       self._seed = abs(int(value))
     else:
-      self._seed = value #'None' prompts the bitGenerator to grab a "high entropy seed from the OS" (presumably the system clock)
+      self._seed = value #'None' prompts the bitGenerator to grab a "high entropy seed from the OS", which defines the inital state.
     # According to the numpy docs, best practice is to create a new Generator rather than reseed an
     # existing one.
     bitGenerator = np.random.MT19937()

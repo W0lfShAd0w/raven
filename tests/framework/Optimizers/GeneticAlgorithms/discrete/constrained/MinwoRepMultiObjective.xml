@@ -17,6 +17,7 @@
     <WorkingDir>Multi_MinwoReplacement</WorkingDir>
     <Sequence>optimize,print</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Steps>

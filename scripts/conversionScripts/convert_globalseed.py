@@ -40,5 +40,6 @@ def convert(tree,fileName=None):
 if __name__=='__main__':
   import convert_utils
   import sys
-  #!convert_utils.standardMain(sys.argv,convert)
-  convert_utils.standardMain(['/home/rollnk/LWRS-PRLO/raven_latest/scripts/conversionScripts/convert_globalseed.py','--tests','--no-rewrite'],convert)
+  convert_utils.standardMain(sys.argv,convert)
+  ## the following is provided as an example format for the expected content of the system arguments (sys.argv):
+  #sys.argv = ['/home/rollnk/LWRS-PRLO/raven_latest/scripts/conversionScripts/convert_globalseed.py','--tests','--no-rewrite']
