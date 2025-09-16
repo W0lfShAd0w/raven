@@ -197,7 +197,7 @@ def locationsGenerator(offSprings,locs):
 
 __mutators = {}
 __mutators['swapMutator']       = swapMutator
-__mutators['swapMutatorEQ']     = swapMutatorEQ
+#!__mutators['swapMutatorEQ']     = swapMutatorEQ #!TODO: I don't think this line is in use yet. The actual swapMutatorEQ function was created on a different branch.
 __mutators['scrambleMutator']   = scrambleMutator
 __mutators['bitFlipMutator']    = bitFlipMutator
 __mutators['inversionMutator']  = inversionMutator
