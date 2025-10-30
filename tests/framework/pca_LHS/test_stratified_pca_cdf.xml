@@ -4,7 +4,9 @@
     <WorkingDir>stratifiedCdf</WorkingDir>
     <Sequence>stratifiedRun,Dump</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
+
   <TestInfo>
     <name>framework/pca_LHS/stratifiedCdf</name>
     <author>wangc</author>

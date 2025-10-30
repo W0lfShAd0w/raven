@@ -14,10 +14,13 @@
   <RunInfo>
     <WorkingDir>SerializeWrkd</WorkingDir>
     <Sequence>extFMUexport</Sequence>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
+
   <Files>
     <Input name="attenuate_pk2.fmu" type="FMU">attenuate_pk2.fmu</Input>
   </Files>
+
   <Steps>
     <IOStep name="extFMUexport">
       <Input class="Models" type="ExternalModel">attenuate</Input>

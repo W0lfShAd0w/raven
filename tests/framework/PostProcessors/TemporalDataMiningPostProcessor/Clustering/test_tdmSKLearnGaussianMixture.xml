@@ -24,6 +24,7 @@
     <WorkingDir>GaussianMixture</WorkingDir>
     <Sequence>readIn,pp1,writeOut</Sequence>
     <batchSize>100</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Files>

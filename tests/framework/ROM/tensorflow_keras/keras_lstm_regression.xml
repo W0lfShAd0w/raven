@@ -18,6 +18,7 @@
     <WorkingDir>LSTMRegression</WorkingDir>
     <Sequence>load, train_lstm, load2, test_lstm</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Files>
@@ -48,15 +49,15 @@
   <Samplers>
     <CustomSampler name="hs_sample">
       <Source class="DataObjects" type="HistorySet">samples</Source>
-      <variable name="a" />
-      <variable name="b" />
-      <variable name="c" />
-      <variable name="d" />
-      <variable name="e" />
-      <variable name="f" />
-      <variable name="prev_sum" />
-      <variable name="prev_square" />
-      <variable name="prev_square_sum" />
+      <variable name="a"/>
+      <variable name="b"/>
+      <variable name="c"/>
+      <variable name="d"/>
+      <variable name="e"/>
+      <variable name="f"/>
+      <variable name="prev_sum"/>
+      <variable name="prev_square"/>
+      <variable name="prev_square_sum"/>
     </CustomSampler>
   </Samplers>
 

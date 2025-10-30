@@ -17,6 +17,7 @@
     <WorkingDir>DTW</WorkingDir>
     <Sequence>mcRun1, mcRun2, PP1</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Models>

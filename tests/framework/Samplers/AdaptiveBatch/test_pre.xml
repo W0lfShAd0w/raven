@@ -30,6 +30,7 @@
     <WorkingDir>circle</WorkingDir>
     <Sequence>sample,adapt,dump</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Steps>

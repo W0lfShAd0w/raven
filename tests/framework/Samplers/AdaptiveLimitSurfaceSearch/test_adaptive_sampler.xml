@@ -21,6 +21,7 @@
     <Sequence>adapt,adaptdump</Sequence>
     <batchSize>1</batchSize>
     <maxQueueSize>1</maxQueueSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Steps>

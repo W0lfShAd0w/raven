@@ -25,6 +25,7 @@
     <Sequence>testMetamodelHeatTransfer,dumpResults</Sequence>
     <batchSize>1</batchSize>
     <internalParallel>True</internalParallel>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Distributions>

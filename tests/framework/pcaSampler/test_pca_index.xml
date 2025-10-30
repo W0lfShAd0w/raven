@@ -4,7 +4,9 @@
     <WorkingDir>pcaIndex</WorkingDir>
     <Sequence>FirstMRun,Dump</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
+
   <TestInfo>
     <name>framework/pcaSampler/pcaIndex</name>
     <author>wangc</author>

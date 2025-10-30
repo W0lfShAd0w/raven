@@ -20,6 +20,7 @@
     <WorkingDir>MiniBatchSparsePCA</WorkingDir>
     <Sequence>sampleGen,pp1</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Models>

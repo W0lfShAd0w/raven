@@ -12,6 +12,7 @@
       <revision author="alfoa" date="2017-01-21">Adding this test description.</revision>
     </revisions>
   </TestInfo>
+
   <RunInfo>
     <WorkingDir>custom1D/</WorkingDir>
     <!--
@@ -20,6 +21,7 @@
     -->
     <Sequence>MRun2,plot2,MRun3,plot3</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Steps>
@@ -151,7 +153,7 @@
       <source>PointSet3</source>
       <what>input, output</what>
     </Print>
-    <Plot  name="plot2" overwrite="false" verbosity="debug">
+    <Plot name="plot2" overwrite="false" verbosity="debug">
       <plotSettings>
         <plot>
           <type>histogram</type>
@@ -164,7 +166,7 @@
         <how>pdf</how>
       </actions>
     </Plot>
-    <Plot  name="plot3" overwrite="false" verbosity="debug">
+    <Plot name="plot3" overwrite="false" verbosity="debug">
       <plotSettings>
         <plot>
           <type>histogram</type>

@@ -20,6 +20,7 @@
     <WorkingDir>ExactPCA</WorkingDir>
     <Sequence>sampleGen,pp1,output</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Models>

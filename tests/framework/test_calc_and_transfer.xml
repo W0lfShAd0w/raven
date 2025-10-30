@@ -16,6 +16,7 @@
   <RunInfo>
     <WorkingDir>calc_and_transfer</WorkingDir>
     <Sequence>External_Model,MakeSet,TrainROM,NewHDF5,MakeROMSet,ComparisonStats</Sequence>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Files>

@@ -4,7 +4,9 @@
     <WorkingDir>Sample</WorkingDir>
     <Sequence>make,print</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
+
   <TestInfo>
     <name>framework/Samplers/Sobol/Sobol</name>
     <author>talbpaul</author>

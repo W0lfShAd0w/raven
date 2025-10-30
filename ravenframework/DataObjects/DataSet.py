@@ -189,7 +189,7 @@ class DataSet(DataObject):
       # TODO check structure?
       self._meta[tag] = node
 
-  def addRealization(self, rlz):
+  def addRealization(self, rlz1):
     """
       Adds a "row" (or "sample") to this data object.
       This is the method to add data to this data object.
@@ -225,7 +225,7 @@ class DataSet(DataObject):
     #  Yours truly, talbpw, May 2019
     #########
     # protect against back-changing realization
-    rlz = copy.deepcopy(rlz)
+    rlz = copy.deepcopy(rlz1)
     # if index map was included, remove that now before checking variables
     indexMap = rlz.pop('_indexMap', None)
     if indexMap is not None:

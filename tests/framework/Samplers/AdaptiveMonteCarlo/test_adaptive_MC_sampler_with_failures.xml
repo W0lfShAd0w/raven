@@ -21,6 +21,7 @@
   <RunInfo>
     <WorkingDir>AdaptFailure</WorkingDir>
     <Sequence>adapt,adaptdump</Sequence>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Steps>
@@ -57,8 +58,8 @@
       <sigma>0.01</sigma>
     </Normal>
     <Uniform name="x2_dst">
-        <lowerBound>-1</lowerBound>
-        <upperBound>1</upperBound>
+      <lowerBound>-1</lowerBound>
+      <upperBound>1</upperBound>
     </Uniform>
   </Distributions>
 
@@ -89,7 +90,6 @@
       <inputs>x1,x2</inputs>
       <outputs>y1,y2</outputs>
     </ExternalModel>
-
   </Models>
 
   <OutStreams>

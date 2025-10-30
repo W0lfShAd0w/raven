@@ -14,6 +14,7 @@
   <RunInfo>
     <WorkingDir>ByIndex</WorkingDir>
     <Sequence>load,sample</Sequence>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Steps>

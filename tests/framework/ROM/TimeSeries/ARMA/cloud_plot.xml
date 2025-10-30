@@ -1,3 +1,4 @@
+<?xml version="1.0" ?>
 <Simulation verbosity="debug">
   <TestInfo>
     <name>framework/ROM/TimeSeries/ARMA.CloudPlot</name>
@@ -12,6 +13,7 @@
   <RunInfo>
     <WorkingDir>Interpolated</WorkingDir>
     <Sequence>load_inp, load_pk, sample, plot</Sequence>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Steps>
@@ -82,4 +84,5 @@
       <constant name="scaling">1.0</constant>
     </MonteCarlo>
   </Samplers>
+
 </Simulation>

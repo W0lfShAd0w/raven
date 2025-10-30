@@ -17,11 +17,13 @@
     </revisions>
     <requirements>R-IS-2</requirements>
   </TestInfo>
+
   <RunInfo>
     <JobName>testGenericCodeInterface</JobName>
     <Sequence>sample</Sequence>
     <WorkingDir>GenericInterfaceIO</WorkingDir>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Files>

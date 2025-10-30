@@ -1,4 +1,4 @@
-<?xml version="1.0"?>
+<?xml version="1.0" ?>
 <Simulation verbosity="debug">
   <TestInfo>
     <name>framework/ROM/TimeSeries/DMD.UnparameterizedDMDCMultipleInput</name>
@@ -15,6 +15,7 @@
     <WorkingDir>DMDC/UnparameterizedDMDCMultipleInput</WorkingDir>
     <Sequence>readTrainData,DMDCTrain,stats,writeOut,runDMDc,dumpROM</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Steps>
@@ -68,7 +69,7 @@
       <rankSVD>-1</rankSVD>
       <!-- SubtractNormUXY: True will subtract the initial values from U, X, Y -->
       <subtractNormUXY>True</subtractNormUXY>
-      <!-- Features are the variable names for predictions: Actuators "u" and initial states -->
+      <!-- Features are the variable names for predictions: Actuators &quot;u&quot; and initial states -->
       <Features>u1,u2,x1_init,x2_init,x3_init</Features>
       <!-- Initialization Variables -->
       <initStateVariables>x1_init,x2_init,x3_init</initStateVariables>
@@ -152,4 +153,5 @@
     </HistorySet>
     <DataSet name="rom_stats"/>
   </DataObjects>
+
 </Simulation>
