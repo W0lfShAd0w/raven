@@ -49,7 +49,7 @@ obj_2     *                  o
   <RunInfo>
     <WorkingDir>ZDT1</WorkingDir>
     <Sequence>optimize,print</Sequence>
-    <batchSize>1</batchSize>
+    <batchSize>4</batchSize>
     <globalSeed>5489</globalSeed>
   </RunInfo>
 
@@ -88,13 +88,13 @@ obj_2     *                  o
   <Optimizers>
     <GeneticAlgorithm name="GAopt">
       <samplerInit>
-        <limit>15</limit>
+        <limit>40</limit>
         <initialSeed>42</initialSeed>
         <writeSteps>every</writeSteps>
         <type>min,min</type>
       </samplerInit>
       <GAparams>
-        <populationSize>10</populationSize>
+        <populationSize>40</populationSize>
         <parentSelection>tournamentSelection</parentSelection>
         <reproduction>
           <crossover type="twoPointsCrossover">
@@ -108,11 +108,9 @@ obj_2     *                  o
         </fitness>
         <survivorSelection>rankNcrowdingBased</survivorSelection>
       </GAparams>
-
       <convergence>
         <AHDp>0.0</AHDp>
       </convergence>
-
       <variable name="x1">
         <distribution>unifDist</distribution>
       </variable>
@@ -131,7 +129,7 @@ obj_2     *                  o
   <Samplers>
     <MonteCarlo name="MC_samp">
       <samplerInit>
-        <limit>10</limit>
+        <limit>40</limit>
         <initialSeed>050877</initialSeed>
       </samplerInit>
       <variable name="x1">

@@ -60,6 +60,8 @@ def nonDominatedFrontier(data, returnMask,minMask=None, isFitness=False):
   nonDominatedFrontier = np.arange(nPoints)
   nextPointIndex = 0
 
+  if np.any(np.isnan(data)): #this should never happen, but if "nan" values makes it through then there is a possibility for the while loop to hang indefinitely.
+    raise ValueError("'NaN' value returned in place of fitness value. Check objective function.")
   while nextPointIndex < np.shape(data)[0]:
     if not isFitness:
       nondominatedPointMask = np.any(data < data[nextPointIndex], axis=1) | np.all(data == data[nextPointIndex], axis=1)
@@ -94,7 +96,7 @@ def rankNonDominatedFrontiers(data,isFitness=False):
     rank += 1
     # Get non-dominated points from remaining data
     if not isFitness:
-      currentFront = nonDominatedFrontier(data[mask], False)
+      currentFront = nonDominatedFrontier(data[mask], False, [False] * data.shape[1], isFitness=isFitness)
     else:
       currentFront = nonDominatedFrontier(data[mask], False, [False] * data.shape[1], isFitness=isFitness)
     # Convert indices back to original data space
@@ -132,6 +134,7 @@ def crowdingDistance(rank, popSize, fitness):
     if numPoints <= 2:  # If front has 2 or fewer points, set to infinity
       crowdDist[frontIndices[f]] = np.inf
       continue
+    boundaries = []
     for obj in range(numObjectives):
       # Sort points in current front by current objective
       sortedFront = [i for i in front]
@@ -143,13 +146,11 @@ def crowdingDistance(rank, popSize, fitness):
       crowdDist[sortedFront[-1]] = np.inf
 
       # Ensure all repeated boundary points are set to infinity
-      boundaryValueMin = fitness[sortedFront[0], obj]
-      boundaryValueMax = fitness[sortedFront[-1], obj]
+      boundaries.append(fitness[sortedFront[0], :])
+      boundaries.append(fitness[sortedFront[-1], :])
 
       for i in range(1, numPoints - 1):
-        if fitness[sortedFront[i], obj] == boundaryValueMin:
-          crowdDist[sortedFront[i]] = np.inf
-        if fitness[sortedFront[i], obj] == boundaryValueMax:
+        if any(np.array_equal(fitness[sortedFront[i],:],arr) for arr in boundaries):
           crowdDist[sortedFront[i]] = np.inf
 
       # Skip normalization if all values are identical
