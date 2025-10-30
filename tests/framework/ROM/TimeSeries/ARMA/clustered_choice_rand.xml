@@ -14,6 +14,7 @@
   <RunInfo>
     <WorkingDir>ClusteredRand</WorkingDir>
     <Sequence>load, train, sample, write</Sequence>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Samplers>

@@ -127,11 +127,11 @@ class DataObject(utils.metaclass_insert(abc.ABCMeta, BaseEntity)):
 
     for child in inp.subparts:
       # TODO check for repeats, "notAllowdInputs", names in both input and output space
-      if child.getName() == 'Input':
+      if child.getName() == 'Input' and child.value is not None:
         self._inputs.extend(list(x.strip() for x in child.value.split(',') if x.strip()!=''))
-      elif child.getName() == 'Output':
+      elif child.getName() == 'Output' and child.value is not None:
         self._outputs.extend(list(x.strip() for x in child.value.split(',') if x.strip()!=''))
-      elif child.getName() == 'Index':
+      elif child.getName() == 'Index' and child.value is not None:
         depends = list(d.strip() for d in child.value.split(','))
         var = child.parameterValues['var']
         self._pivotParams[var] = depends

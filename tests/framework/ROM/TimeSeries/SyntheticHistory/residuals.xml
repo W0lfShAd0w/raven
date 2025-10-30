@@ -14,6 +14,7 @@
     <WorkingDir>Residuals</WorkingDir>
     <Sequence>read, train, meta</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Steps>
@@ -43,7 +44,8 @@
       <saveResiduals>True</saveResiduals>
       <pivotParameter>seconds</pivotParameter>
       <fourier target="signal1, signal2">
-        <periods>3, 5, 7, 10</periods> <!-- training signal also has period=2, left for the residual -->
+        <periods>3, 5, 7, 10</periods>
+        <!-- training signal also has period=2, left for the residual -->
       </fourier>
     </ROM>
   </Models>

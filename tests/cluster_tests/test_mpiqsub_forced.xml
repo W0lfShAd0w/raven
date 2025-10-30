@@ -26,6 +26,7 @@
       <coresneeded>2</coresneeded>
       <runQSUB/>
     </mode>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Files>

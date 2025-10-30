@@ -1,4 +1,4 @@
-<?xml version="1.0"?>
+<?xml version="1.0" ?>
 <Simulation verbosity="debug">
   <TestInfo>
     <name>framework/ROM/TimeSeries/DMD.traditionalDMD</name>
@@ -31,6 +31,7 @@
              writeOut
     </Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Files>
@@ -140,6 +141,5 @@
     </HistorySet>
     <DataSet name="rom_stats"/>
   </DataObjects>
-  
 
 </Simulation>

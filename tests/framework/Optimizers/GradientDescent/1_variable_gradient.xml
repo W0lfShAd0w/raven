@@ -20,6 +20,7 @@
   <RunInfo>
     <WorkingDir>1variable</WorkingDir>
     <Sequence>optimize_fd, optimize_cd, optimize_spsa, print</Sequence>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Steps>

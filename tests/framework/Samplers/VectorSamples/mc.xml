@@ -13,6 +13,7 @@
   <RunInfo>
     <WorkingDir>MC</WorkingDir>
     <Sequence>sample,print</Sequence>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Steps>

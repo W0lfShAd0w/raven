@@ -20,6 +20,7 @@
     <WorkingDir>SpectralClustering</WorkingDir>
     <Sequence>readIn,SpectralCircles,output</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Files>

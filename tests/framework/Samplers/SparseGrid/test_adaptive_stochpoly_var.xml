@@ -1,3 +1,4 @@
+<?xml version="1.0" ?>
 <Simulation verbosity="debug">
   <TestInfo>
     <name>framework/Samplers/SparseGrid/AdaptiveOnVariance</name>
@@ -13,6 +14,7 @@
     <WorkingDir>AdaptiveStochasticPolyVar</WorkingDir>
     <Sequence>make, train, stats, print</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Steps>

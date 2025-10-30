@@ -35,6 +35,7 @@
   <RunInfo>
     <WorkingDir>SerializePyomo</WorkingDir>
     <Sequence>sample, train, serialize, pickle</Sequence>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Files>
@@ -88,11 +89,11 @@
     <Grid name="grid">
       <variable name="y1">
         <distribution>dist</distribution>
-        <grid type='CDF' construction='equal' steps='1'>0 1</grid>
+        <grid type="CDF" construction="equal" steps="1">0 1</grid>
       </variable>
       <variable name="y2">
         <distribution>dist</distribution>
-        <grid type='CDF' construction='equal' steps='1'>0 1</grid>
+        <grid type="CDF" construction="equal" steps="1">0 1</grid>
       </variable>
     </Grid>
   </Samplers>
@@ -106,6 +107,5 @@
       <Output>ans</Output>
     </PointSet>
   </DataObjects>
-
 
 </Simulation>

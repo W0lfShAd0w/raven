@@ -40,6 +40,7 @@ from . import OutStreams
 from .JobHandler import JobHandler
 from .utils import utils, TreeStructure, xmlUtils, mathUtils
 from .utils.utils import ParallelLibEnum
+from .utils.randomUtils import randomSeed
 from . import Decorators
 from .Application import __QtAvailable
 from .Interaction import Interaction
@@ -582,6 +583,7 @@ class Simulation(MessageUser):
       runInfoSkipIter = set()
     else:
       runInfoSkipIter = runInfoSkip
+    parsedSeed = False #log if globalSeed parameter if parsed and print to log accordingly
     for element in xmlNode:
       if element.tag in runInfoSkipIter:
         self.raiseAWarning(f"Skipped element {element.tag}")
@@ -736,8 +738,15 @@ class Simulation(MessageUser):
         if modeName in self.__modeHandlerDict:
           self.raiseAWarning(f"duplicate mode definition {modeName}")
         self.__modeHandlerDict[modeName] = module.__dict__[modeClass]
+      elif element.tag == 'globalSeed': #this is needed for reproducibility in case the RNG is called before a standard seeding step.
+        parsedSeed = True
+        globalSeed = int(element.text) if element.text.lower() != 'none' else None
+        self.raiseADebug('Setting RAVEN RNG seed to',globalSeed)
+        randomSeed(globalSeed) #Reinstance the global generator with the requested seed.
       else:
         self.raiseAnError(IOError, f'RunInfo element "{element.tag}" unknown!')
+    if not parsedSeed:
+      self.raiseADebug('No globalSeed specified in RunInfo, defaulting to a high entropy RNG state.')
 
   def printDicts(self):
     """

@@ -4,7 +4,9 @@
     <WorkingDir>large</WorkingDir>
     <Sequence>make1k,print,load,print2</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
+
   <TestInfo>
     <name>framework/Samplers/Restart.LoadFromLargeCSV</name>
     <author>talbpaul</author>

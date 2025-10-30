@@ -1,3 +1,4 @@
+<?xml version="1.0" ?>
 <Simulation verbosity="debug">
   <TestInfo>
     <name>framework/Databases/NetCDF.Sample</name>
@@ -12,6 +13,7 @@
   <RunInfo>
     <WorkingDir>Sample</WorkingDir>
     <Sequence>sample</Sequence>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Steps>

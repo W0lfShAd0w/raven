@@ -18,6 +18,7 @@
     <Sequence>hybridModelCode</Sequence>
     <WorkingDir>runCode</WorkingDir>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Files>

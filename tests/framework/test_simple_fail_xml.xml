@@ -12,9 +12,11 @@
       test.
     </description>
   </TestInfo>
+
   <RunInfo>
     <WorkingDir>fail_xml</WorkingDir>
     <Sequence>External_Model,MakeSet</Sequence>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Models>

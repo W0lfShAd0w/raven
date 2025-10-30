@@ -20,6 +20,7 @@
     <WorkingDir>KernelPCA</WorkingDir>
     <Sequence>readIn,PCAIris,output</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Files>

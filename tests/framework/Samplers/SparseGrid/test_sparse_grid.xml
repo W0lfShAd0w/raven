@@ -4,7 +4,9 @@
     <WorkingDir>grid</WorkingDir>
     <Sequence>makeTP,makeTD,makeHC</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
+
   <TestInfo>
     <name>framework/Samplers/SparseGrid/SmolyakGridTest</name>
     <author>talbpaul</author>

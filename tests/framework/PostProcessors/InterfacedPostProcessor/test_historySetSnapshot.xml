@@ -14,6 +14,7 @@
     <WorkingDir>HistorySetSnapShot</WorkingDir>
     <Sequence>FirstMRun,PP,PP1,plot1,PP2,plot2,PP3,plot3,PP4,plot4</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Files>
@@ -168,7 +169,7 @@
       <type>csv</type>
       <source>outMC_PP4</source>
     </Print>
-    <Plot  name="plot1" overwrite="False">
+    <Plot name="plot1" overwrite="False">
       <plotSettings>
         <plot>
           <type>line</type>
@@ -192,7 +193,7 @@
         </title>
       </actions>
     </Plot>
-    <Plot  name="plot2" overwrite="False">
+    <Plot name="plot2" overwrite="False">
       <plotSettings>
         <plot>
           <type>line</type>
@@ -216,7 +217,7 @@
         </title>
       </actions>
     </Plot>
-    <Plot  name="plot3" overwrite="False">
+    <Plot name="plot3" overwrite="False">
       <plotSettings>
         <plot>
           <type>line</type>
@@ -240,7 +241,7 @@
         </title>
       </actions>
     </Plot>
-    <Plot  name="plot4" overwrite="False">
+    <Plot name="plot4" overwrite="False">
       <plotSettings>
         <plot>
           <type>line</type>

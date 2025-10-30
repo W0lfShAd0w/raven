@@ -20,6 +20,7 @@
   <RunInfo>
     <WorkingDir>Adapt</WorkingDir>
     <Sequence>adapt,adaptdump</Sequence>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Steps>
@@ -56,8 +57,8 @@
       <sigma>0.01</sigma>
     </Normal>
     <Uniform name="x2_dst">
-        <lowerBound>-1</lowerBound>
-        <upperBound>1</upperBound>
+      <lowerBound>-1</lowerBound>
+      <upperBound>1</upperBound>
     </Uniform>
   </Distributions>
 
@@ -85,10 +86,9 @@
 
   <Models>
     <ExternalModel ModuleToLoad="adaptive_test_model" name="testFunction" subType="">
-        <inputs>x1,x2</inputs>
-        <outputs>y1,y2</outputs>
+      <inputs>x1,x2</inputs>
+      <outputs>y1,y2</outputs>
     </ExternalModel>
-
   </Models>
 
   <OutStreams>

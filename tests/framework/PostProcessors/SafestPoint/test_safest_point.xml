@@ -26,6 +26,7 @@
     <WorkingDir>SafestPointPP</WorkingDir>
     <Sequence>pth1,pth2,pth3,pth4</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Steps>

@@ -25,6 +25,7 @@
     <WorkingDir>ARMAreseed</WorkingDir>
     <Sequence>read,run,write</Sequence>
     <batchSize>1</batchSize>
+    <globalSeed>5489</globalSeed>
   </RunInfo>
 
   <Files>
