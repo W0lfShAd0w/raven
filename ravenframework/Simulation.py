@@ -745,8 +745,8 @@ class Simulation(MessageUser):
         randomSeed(globalSeed) #Reinstance the global generator with the requested seed.
       else:
         self.raiseAnError(IOError, f'RunInfo element "{element.tag}" unknown!')
-      if not parsedSeed:
-        self.raiseADebug('No globalSeed specified in RunInfo, defaulting to a high entropy RNG state.')
+    if not parsedSeed:
+      self.raiseADebug('No globalSeed specified in RunInfo, defaulting to a high entropy RNG state.')
 
   def printDicts(self):
     """
