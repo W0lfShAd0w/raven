@@ -37,19 +37,19 @@ def singleObjSurvivorSelect(self, info, rlz, traj, individuals, individualFitnes
       self._sampledPopulationInfo[tuple(individuals[i].data)] = individualFitness.to_dataarray()[:,i]
 
   if self.counter > 1:
-    self.matingPop_inputs, self.matingPop_fitness,\
-    self.matingPop_ages,self.matingPop_objvals = self._survivorSelectionInstance(age=self.matingPop_ages,
+    self.matingPopInputs, self.matingPopFitness,\
+    self.matingPopAges,self.matingPopObjVals = self._survivorSelectionInstance(age=self.matingPopAges,
                                                                     variables=list(self.toBeSampled),
-                                                                    population=self.matingPop_inputs,
-                                                                    fitness=self.matingPop_fitness,
+                                                                    population=self.matingPopInputs,
+                                                                    fitness=self.matingPopFitness,
                                                                     objVar = self._objectiveVar[0],
                                                                     newRlz=rlz,
                                                                     individualsFitness=individualFitness,
-                                                                    popObjectiveVal=self.matingPop_objvals)
+                                                                    popObjectiveVal=self.matingPopObjVals)
   else:
-    self.matingPop_inputs = individuals
-    self.matingPop_fitness = individualFitness
-    self.matingPop_objvals = rlz[self._objectiveVar[0]].data
+    self.matingPopInputs = individuals
+    self.matingPopFitness = individualFitness
+    self.matingPopObjVals = rlz[self._objectiveVar[0]].data
 
 def multiObjSurvivorSelect(self, info, rlz, traj, individuals, individualFitness, objectiveVal, g):
   """
@@ -68,22 +68,22 @@ def multiObjSurvivorSelect(self, info, rlz, traj, individuals, individualFitness
       self._sampledPopulationInfo[tuple(individuals[i].data)] = individualFitness.to_dataarray()[:,i]
 
   if self.counter > 1:
-    self.matingPop_inputs,self.matingPop_ranks, \
-    self.matingPop_ages,self.matingPop_CD, \
-    self.matingPop_objvals,self.matingPop_fitness, \
-    self.matingPop_g                  = self._survivorSelectionInstance(age=self.matingPop_ages,
+    self.matingPopInputs,self.matingPopRanks, \
+    self.matingPopAges,self.matingPopCD, \
+    self.matingPopObjVals,self.matingPopFitness, \
+    self.matingPop_g                  = self._survivorSelectionInstance(age=self.matingPopAges,
                                                                          variables=list(self.toBeSampled),
-                                                                         population=self.matingPop_inputs,
+                                                                         population=self.matingPopInputs,
                                                                          individuals=rlz,
-                                                                         popObjectiveVal=self.matingPop_objvals,
+                                                                         popObjectiveVal=self.matingPopObjVals,
                                                                          offObjectiveVal=objectiveVal,
-                                                                         popFit = self.matingPop_fitness,
+                                                                         popFit = self.matingPopFitness,
                                                                          offFit = individualFitness,
                                                                          popConstV = self.matingPop_g,
                                                                          direction=self._minMax,
                                                                          offConstV = g)
   else:
-    self.matingPop_inputs = individuals
-    self.matingPop_fitness = individualFitness
-    self.matingPop_objvals = objectiveVal
+    self.matingPopInputs = individuals
+    self.matingPopFitness = individualFitness
+    self.matingPopObjVals = objectiveVal
     self.matingPop_g = g
