@@ -396,7 +396,10 @@ class RavenSampled(Optimizer):
               if np.all(np.array(soln) == [self._solutionExport._data[key][indx].item() for key in self.toBeSampled]):
                 # add soln values from population data to opt
                 for key in list(opt):
-                  opt[key] = np.append(opt[key], self._solutionExport._data[key][indx].item())
+                  try:
+                    opt[key] = np.append(opt[key], self._solutionExport._data[key][indx].item())
+                  except KeyError:
+                    continue #!TODO: repeated issue with "ConstraintEvaluation" not being stored in self._solutionExport._data
                 break #it shouldn't be possible, but this would fail silently if soln isn't found in the population data
 
     #Note: bestTraj == traj
