@@ -1090,7 +1090,7 @@ def which(cmd):
   return None
 
 ### adding functions to share between EQsample.py and GA/crossover-mutation
-## create a class EQchecker
+## create a class EQchecker #!TODO: this has the highly flawed feature of using random instead of RAVEN's seeded RNG. This desparately needs to be fixed.
 class EQchecker:
   """
   EQ checker and genome generator
@@ -1167,7 +1167,7 @@ class EQchecker:
       my_dict[key] = value
     return my_dict
 
-  ## function for shuffling shcme logic
+  ## function for shuffling scheme logic
   def getminN(self, target):
     """
     Get the minium number of elements required to reach the the target score
@@ -1224,7 +1224,7 @@ class EQchecker:
     """
     is_ok = False
     while not is_ok:
-      N = random.randint(Nmin, Nmax)
+      N = random.randint(Nmin, Nmax) #!TODO: we SHOULD NOT be using random when RAVEN has it's own seeded RNG
       M = random.sample(A, N)
       C = self.calculate_score(M)
       # print('check M score', M, C)
@@ -1333,7 +1333,7 @@ class EQchecker:
       genome[i] = int(j)
     for i,j in  zip(bat2id_sorted, genbat2):
       genome[i] = int(j)
-    flag = self.checkgennome(genome)
+    flag = self.checkgenome(genome)
     if len(genbat1)!= len(bat1id_sorted) or len(genbat2)!= len(bat2id_sorted):
       flag = False
     return flag, genome
