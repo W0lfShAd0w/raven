@@ -324,7 +324,7 @@ class RavenSampled(Optimizer):
     rlz = self.normalizeData(rlz)
     self._useRealization(info, rlz)
 
-  def finalizeSampler(self, failedRuns):
+  def finalizeSampler(self, failedRuns): #!TODO: is this unused??
     """
       Last tasks to perform before Step is finished.
       @ In, failedRuns, list, runs that failed as part of this sampling
@@ -417,7 +417,8 @@ class RavenSampled(Optimizer):
                     else:
                       opt[key] = np.append(opt[key], self._solutionExport._data[key][indx].item())
                   except KeyError:
-                    opt[key] = np.append(opt[key], None) #If the key is missing from solutionExport, it isn't in the addRealization and won't be used anyway.
+                    continue #!TODO: repeated issue with "ConstraintEvaluation" not being stored in self._solutionExport._data
+                    #!opt[key] = np.append(opt[key], None) #If the key is missing from solutionExport, it isn't in the addRealization and won't be used anyway.
                 break # NOTE: it shouldn't be possible, but this would fail silently if soln isn't found in the population data
 
     #Note: bestTraj == traj

@@ -94,7 +94,7 @@ class EntityFactory(MessageUser):
     # return class from known types
     try:
       if Type == "PRLO.Simulate":
-        pass
+        pass #!TODO: This conditional is from Khang. What is this supposed to do??
       return self._registeredTypes[Type]
     except KeyError:
       # is this a request from an unloaded plugin?
