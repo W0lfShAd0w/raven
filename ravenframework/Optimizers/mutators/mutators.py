@@ -61,7 +61,7 @@ def swapMutator(offSprings, distDict, **kwargs):
 
 def swapMutatorEQ(offSprings, distDict, **kwargs):
   """
-    This method performs the swap mutator for multiple locations for EQ. For each child, 
+    This method performs the swap mutator for multiple locations for EQ. For each child,
     two genes are sampled and switched
     E.g.:
     child=[a,b,c,d,e] --> b and d are selected --> child = [a,d,c,b,e]
@@ -72,7 +72,7 @@ def swapMutatorEQ(offSprings, distDict, **kwargs):
           variables, list, variables names.
     @ Out, children, xr.DataArray, the mutated chromosome, i.e., the child.
   """
-  ## EQ check 
+  ## EQ check
   if kwargs['EQfiles'] is not None:
     EQflag = True
     tempfiles = kwargs['EQfiles']
@@ -82,7 +82,7 @@ def swapMutatorEQ(offSprings, distDict, **kwargs):
     inpfile = temp.getPath()+temp.getFilename()
     EQobject = EQchecker(xmlinput=xmlfile, EQinput=inpfile)
   else:
-    EQflag = False 
+    EQflag = False
   # initializing children
   children = xr.DataArray(np.zeros((np.shape(offSprings))),
                           dims=['chromosome','Gene'],

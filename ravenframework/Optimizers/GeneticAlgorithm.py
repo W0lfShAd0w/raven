@@ -1157,7 +1157,7 @@ class GeneticAlgorithm(RavenSampled):
       @ Out, point, dict, point used in this realization
     """
     varList = set(list(self.toBeSampled.keys()) + self._solutionExport.getVars('input') + self._solutionExport.getVars('output'))
-    #!varList = [var for var in varList if var not in self._objectiveVar] #!TODO:this appears to be desyncing the estimated 'final' rlzs. 
+    #!varList = [var for var in varList if var not in self._objectiveVar] #!TODO: this appears to be desyncing the estimated 'final' rlzs.
     selVars = [var for var in varList if var in rlz.data_vars]
 
     rankOneIDX = np.where(rank.data == 1)[0].tolist()
