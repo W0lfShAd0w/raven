@@ -417,8 +417,7 @@ class RavenSampled(Optimizer):
                     else:
                       opt[key] = np.append(opt[key], self._solutionExport._data[key][indx].item())
                   except KeyError:
-                    continue #!TODO: repeated issue with "ConstraintEvaluation" not being stored in self._solutionExport._data
-                    #!opt[key] = np.append(opt[key], None) #If the key is missing from solutionExport, it isn't in the addRealization and won't be used anyway.
+                    opt[key] = np.append(opt[key], None) #If the key is missing from solutionExport, it isn't in the addRealization and won't be used anyway.
                 break # NOTE: it shouldn't be possible, but this would fail silently if soln isn't found in the population data
 
     #Note: bestTraj == traj
@@ -733,6 +732,12 @@ class RavenSampled(Optimizer):
         toExport[var] = rlz[var]
     # formatting
     toExport = dict((var, np.atleast_1d(val)) for var, val in toExport.items())
+    # Force solutionExport to expect all the vars we want to give it.
+    for key in toExport.keys():
+      if key not in self._solutionExport.vars:
+        self._solutionExport.addedVars.append(key)
+    self._solutionExport.addedVars = list(set(self._solutionExport.addedVars))
+    # Write solution data to solutionExport
     self._solutionExport.addRealization(toExport)
 
   def _addToSolutionExport(self, traj, rlz, acceptable):
