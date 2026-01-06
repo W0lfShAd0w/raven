@@ -816,14 +816,6 @@ class GeneticAlgorithm(RavenSampled):
       self._closeTrajectory(t, 'cancel', 'Currently GA is single trajectory', 0)
     self.incrementIteration(traj)
 
-    files = self.assemblerDict['Files']
-    ## add checker/here
-    EQflag = any("EQinput" in sublist for sublist in files)
-    if EQflag:
-      self._EQcheckfile = files
-    else:
-      self._EQcheckfile = None
-
     currentPopInputs = datasetToDataArray(rlz, list(self.toBeSampled))
 
     currentPop_objvals = []
@@ -957,13 +949,14 @@ class GeneticAlgorithm(RavenSampled):
                                               variables=list(self.toBeSampled),
                                               crossoverProb=self._crossoverProb,
                                               points=self._crossoverPoints,
-                                              EQfiles = self._EQcheckfile)
+                                              files = self.assemblerDict['Files'])
       # 8.2 Mutation
       childrenMutated = self._mutationInstance(offSprings=childrenXover,
                                                distDict=self.distDict,
                                                locs=self._mutationLocs,
                                                mutationProb=self._mutationProb,
-                                               variables=list(self.toBeSampled), EQfiles = self._EQcheckfile)
+                                               variables=list(self.toBeSampled),
+                                               files = self.assemblerDict['Files'])
 
   ## 9. repair/replacement
       # Repair should only happen if multiple genes in a single chromosome have the same values (),

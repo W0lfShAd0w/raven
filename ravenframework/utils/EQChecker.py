@@ -1,0 +1,166 @@
+# Copyright 2017 Battelle Energy Alliance, LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import os
+import numpy as np
+from xml.etree import ElementTree as ET
+from ravenframework.utils import randomUtils
+
+class EQChecker():
+  """
+  EQ checker and genome modifier for existing EQ cycle genomes.
+  """
+  def __init__(self,prloDataInputFile):
+    """
+      Initializing variables.
+      @ In, None
+      @ Out, None
+    """
+    self.prloData = self.PRLODataParser(prloDataInputFile)
+
+  ## function for shuffling scheme logic
+  def checkGenome(self,genome,symMult):
+    """
+      @ In, genome, list, the faID selections that define the current solution.
+      @ In, zoneMap, list, zoneMap with the batch assignements at each location in the symmetric solution.
+      @ In, symMult, dict, multiplicity of each location in the zoning map (1-indexed).
+      @ Out, bool, False if any check is violated; True otherwise.
+    """
+    decodedGenomeWithMult = [(self.decodeFAID(genome[l],self.prloData.solnLen,self.prloData.numBatches),symMult[l+1]) for l in range(len(genome))]
+    zoneMap = [l[0][1] for l in decodedGenomeWithMult]
+
+  ## Assert: no batch is larger than the previous one.
+    batchCount = {}
+    for batNum in set(zoneMap):
+      batchCount[batNum] = sum([symMult[i+1] for i in range(len(zoneMap)) if zoneMap[i] == batNum])
+    for batNum in batchCount.keys():
+      if batNum == 1:
+        continue
+      else:
+        if batchCount[batNum] > batchCount[batNum-1]:
+          return False
+
+  ## Assert: every FA has a valid source
+    for gene in genome:
+      currentFA = self.decodeFAID(gene, self.prloData.solnLen, self.prloData.numBatches)
+      if currentFA[1] == 1: #fresh fuel FA
+        continue
+      else:
+        sourceFA = self.decodeFAID(genome[currentFA[0]-1], self.prloData.solnLen, self.prloData.numBatches)
+        # check that FA types match and current batchNum = source batchNum + 1
+        if currentFA[2] != sourceFA[2] or currentFA[1] - sourceFA[1] != 1:
+          return False
+
+  ## Assert: no shuffling motion violates multiplicity
+    for i in range(len(decodedGenomeWithMult)):
+      gene = decodedGenomeWithMult[i]
+      reloadedCount = sum([loc[1] for loc in decodedGenomeWithMult if loc[0] == (i+1, gene[0][1]+1, gene[0][2])])
+      if reloadedCount > gene[1]:
+        return False
+
+  ## Assert: FA type doesn't change during reshuffle and batch number increments correctly.
+    for i in range(len(decodedGenomeWithMult)):
+      gene = decodedGenomeWithMult[i]
+      if gene[0][2] != decodedGenomeWithMult[gene[0][0]-1][0][2]: # 1-indexed to 0-indexed
+        return False
+      elif decodedGenomeWithMult[gene[0][0]-1][0][1] - gene[0][1] == 1:
+        return False
+
+    return True
+
+  class PRLODataParser():
+    """
+      Interprets the data from the PRLO data file in '.xml'.
+      This is a trimmed down version of the PARCSv345InpGen.PRLODataParser class.
+      #!NOTE(rollnk): it is likely more elegant to have a single, external version of this class rather than redefine it repeatedly.
+    """
+    def __init__(self, inputFile):
+      """
+        Constructor.
+        @ In, inputFile, string, xml PARCSv345 parameters file
+        @ Out, None
+      """
+      fullFile = os.path.join(inputFile)
+      dorm = ET.parse(fullFile)
+      root = dorm.getroot()
+
+      # Parse user-provided data from XML file
+      #!TODO: define default values for missing params; list expected formats/units here.
+      self.calculationType = '_'.join(root.find('calculationType').text.strip().lower().split())
+      self.numAssemblies = int(root.find('numAssemblies').text.strip())
+      self.numBatches = int(root.find('numBatches').text.strip())
+      self.feedBatchSizeLimits = root.find('feedBatchSizeLimits').text.strip() if root.find('feedBatchSizeLimits') is not None else None
+      self.colLabels = root.find('colLabels').text.strip()
+      self.rowLabels = root.find('rowLabels').text.strip()
+      self.geometry = root.find('geometry').text.strip()
+      self.coreShape = root.find('coreShape').text
+      self.faDict = []
+      for fa in root.iter('FA'):
+        self.faDict.append(fa.attrib)
+      self.numTypes = len([fa for fa in self.faDict if fa['type'] == 'fuel'])
+      self.xsDict =[]
+      for xs in root.iter('XS'):
+        self.xsDict.append(xs.attrib)
+
+      # Resolve calculated values from user-provided data
+      fuelMap = [int(s) for s in self.geometry.strip().split() if s.isdigit()]
+      self.solnLen = max(fuelMap)
+      self.symmetricMultiplicity = {i:fuelMap.count(i) for i in fuelMap}
+
+      if not self.feedBatchSizeLimits:
+        self.feedBatchSizeLimits = (np.ceil(self.numAssemblies/self.numBatches),self.numAssemblies) # logical extremes for feed batch size
+      else:
+        self.feedBatchSizeLimits = tuple([int(val.strip()) for val in self.feedBatchSizeLimits.replace(',',' ').split()])
+        if len(self.feedBatchSizeLimits) == 1:
+          # if only one value is given, assume that value is the maximum limit.
+          self.feedBatchSizeLimits = (np.ceil(self.numAssemblies/self.numBatches),self.feedBatchSizeLimits[0])
+        else:
+          self.feedBatchSizeLimits = (self.feedBatchSizeLimits[0],self.feedBatchSizeLimits[-1]) #ensure only two values are provided.
+
+  def decodeFAID(self,faID,solnLen,numBatches):
+    """
+      PRLO uses a numbering scheme for the solution encoding that assumes
+      all possible FA's are by batch, then location, then type, for a total
+      count of possible FA designations = numBatches*numAssemblies*numTypes
+      @ In, faID, str, the FA ID according to the PRLO encoding scheme (0-indexed)
+      @ In, solnLen, int, the number of fuel locations in the solution
+      @ In, numBatches, int, the maximum number of fuel batches.
+      @ Out, locNum, int, source location in the solution for faID (1-indexed)
+      @ Out, batchNum, int, batch number for faID (1-indexed)
+      @ Out, typeNum, int, FA type number for faID (1-indexed)
+    """
+    # decode location
+    locNum = int(np.ceil(((faID + 1) % (solnLen*numBatches)) / numBatches))
+    if locNum == 0:
+      locNum = int(np.ceil((faID % (solnLen*numBatches)) / numBatches))
+    # decode batch number
+    batchNum = 1 + int(faID % numBatches)
+    # decode FA type
+    typeNum = 1 + int(faID / (solnLen * numBatches))
+    return (locNum, batchNum, typeNum)
+
+  def encodeFAID(self,FA,solnLen,numBatches):
+    """
+      PRLO uses a numbering scheme for the solution encoding that assumes
+      all possible FA's are by batch, then location, then type, for a total
+      count of possible FA designations = numBatches*numAssemblies*numTypes
+      @ In, FA, tuple, the FA source location, batch number, and type (all 1-indexed)
+      @ In, solnLen, int, the number of fuel locations in the solution
+      @ In, numBatches, int, the maximum number of fuel batches.
+      @ Out, faID, str, the FA ID according to the PRLO encoding scheme (0-indexed)
+    """
+    if FA[0] > solnLen or FA[1] > numBatches:
+      return None # prevent eroneous FA's from being given ID's.
+    else:
+      return (FA[0]-1)*numBatches + solnLen*numBatches*(FA[2]-1) + (FA[1]-1)
