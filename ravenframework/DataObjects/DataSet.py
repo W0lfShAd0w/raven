@@ -189,7 +189,7 @@ class DataSet(DataObject):
       # TODO check structure?
       self._meta[tag] = node
 
-  def addRealization(self, rlz1):
+  def addRealization(self, rlz):
     """
       Adds a "row" (or "sample") to this data object.
       This is the method to add data to this data object.
@@ -225,7 +225,7 @@ class DataSet(DataObject):
     #  Yours truly, talbpw, May 2019
     #########
     # protect against back-changing realization
-    rlz = copy.deepcopy(rlz1)
+    rlz = copy.deepcopy(rlz)
     # if index map was included, remove that now before checking variables
     indexMap = rlz.pop('_indexMap', None)
     if indexMap is not None:
@@ -269,10 +269,8 @@ class DataSet(DataObject):
     #  This is because the cNDarray collector expects a LIST of realization, not a single realization.
     #  Maybe the "append" method should be renamed to "extend" or changed to append one at a time.
     # set realizations as a list of realizations (which are ordered lists)
-    #!TODO: why are we arbitrarily filtering the vars in rlz through self._orderedVars?? just use the data provided.
-    #!newData = np.array(list(rlz[var] for var in self._orderedVars)+[0.0], dtype=object)
-    #!newData = newData[:-1]
-    newData = np.array(list(rlz[var] for var in rlz)+[0.0], dtype=object)[:-1]
+    newData = np.array(list(rlz[var] for var in self._orderedVars)+[0.0], dtype=object)
+    newData = newData[:-1]
     # if data storage isn't set up, set it up
     if self._collector is None:
       self._collector = self._newCollector(width=len(self._orderedVars))

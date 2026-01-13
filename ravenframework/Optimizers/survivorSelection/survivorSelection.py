@@ -14,76 +14,77 @@
 """
   Implementation of survivorSelection step for new generation
   selection process in Genetic Algorithm.
-  NOTE: this file only exists to call methods in survivorSelectors.py, making for a confusing and convoluted call stack. - rollnk
 
   Created Apr,3,2024
   @authors: Mohammad Abdo, Junyung Kim
 """
+# External Modules----------------------------------------------------------------------------------
+import numpy as np
+import xarray as xr
+from ravenframework.utils import frontUtils
+# External Modules End------------------------------------------------------------------------------
 
-def singleObjSurvivorSelect(self, info, rlz, traj, individuals, individualFitness, objectiveVal, g):
+# Internal Modules----------------------------------------------------------------------------------
+from ...utils.gaUtils import dataArrayToDict, datasetToDataArray
+# Internal Modules End------------------------------------------------------------------------------
+
+# @profile
+
+def singleObjSurvivorSelect(self, info, rlz, traj, offSprings, offSpringFitness, objectiveVal, g):
   """
     process of selecting survivors for single objective problems
     @ In, self, Instance of GeneticAlgorithm. Also information to return is added to this
     @ In, info, dict, dictionary of information
     @ In, rlz, dict, dictionary of realizations
     @ In, traj, dict, dictionary of trajectories
-    @ In, individuals, list, list of individuals
-    @ In, individualFitness, list, list of individual fitness
+    @ In, offSprings, list, list of offsprings
+    @ In, offSpringFitness, list, list of offspring fitness
     @ In, objectiveVal, list, floats of objective values
     @ In, g, xr.DataArray, constraint data
   """
-  if individualFitness is not None:
-    for i in range(individuals.shape[0]):
-      self._sampledPopulationInfo[tuple(individuals[i].data)] = individualFitness.to_dataarray()[:,i]
-
   if self.counter > 1:
-    self.matingPop_inputs, self.matingPop_fitness,\
-    self.matingPop_ages,self.matingPop_objvals = self._survivorSelectionInstance(age=self.matingPop_ages,
+    self.population, self.fitness,\
+    self.popAge,self.objectiveVal = self._survivorSelectionInstance(age=self.popAge,
                                                                     variables=list(self.toBeSampled),
-                                                                    population=self.matingPop_inputs,
-                                                                    fitness=self.matingPop_fitness,
+                                                                    population=self.population,
+                                                                    fitness=self.fitness,
                                                                     objVar = self._objectiveVar[0],
                                                                     newRlz=rlz,
-                                                                    individualsFitness=individualFitness,
-                                                                    popObjectiveVal=self.matingPop_objvals)
+                                                                    offSpringsFitness=offSpringFitness,
+                                                                    popObjectiveVal=self.objectiveVal)
   else:
-    self.matingPop_inputs = individuals
-    self.matingPop_fitness = individualFitness
-    self.matingPop_objvals = rlz[self._objectiveVar[0]].data
+    self.population = offSprings
+    self.fitness = offSpringFitness
+    self.objectiveVal = rlz[self._objectiveVar[0]].data
 
-def multiObjSurvivorSelect(self, info, rlz, traj, individuals, individualFitness, objectiveVal, g):
+def multiObjSurvivorSelect(self, info, rlz, traj, offSprings, offSpringFitness, objectiveVal, g):
   """
     process of selecting survivors for multi-objective problems
     @ In, self, instance of GeneticAlgorithm. Also information to return is added to this
     @ In, info, dict, dictionary of information
     @ In, rlz, dict, dictionary of realizations (including values of all objectives)
     @ In, traj, dict, dictionary of trajectories
-    @ In, individuals, list, list of individual individuals
-    @ In, individualFitness, list, list of fitness values for individual individuals
+    @ In, offSprings, list, list of offspring individuals
+    @ In, offSpringFitness, list, list of fitness values for offspring individuals
     @ In, objectiveVal, list, values of the objectives (for ranking and crowding distance calculation)
     @ In, g, xr.DataArray, constraint data
   """
-  if individualFitness is not None:
-    for i in range(individuals.shape[0]):
-      self._sampledPopulationInfo[tuple(individuals[i].data)] = individualFitness.to_dataarray()[:,i]
-
   if self.counter > 1:
-    self.matingPop_inputs,self.matingPop_ranks, \
-    self.matingPop_ages,self.matingPop_CD, \
-    self.matingPop_objvals,self.matingPop_fitness, \
-    self.matingPop_g                  = self._survivorSelectionInstance(age=self.matingPop_ages,
+    self.population,self.rank, \
+    self.popAge,self.crowdingDistance, \
+    self.objectiveVal,self.fitness, \
+    self.constraintsV                  = self._survivorSelectionInstance(age=self.popAge,
                                                                          variables=list(self.toBeSampled),
-                                                                         population=self.matingPop_inputs,
-                                                                         individuals=rlz,
-                                                                         popObjectiveVal=self.matingPop_objvals,
+                                                                         population=self.population,
+                                                                         offsprings=rlz,
+                                                                         popObjectiveVal=self.objectiveVal,
                                                                          offObjectiveVal=objectiveVal,
-                                                                         popFit = self.matingPop_fitness,
-                                                                         offFit = individualFitness,
-                                                                         popConstV = self.matingPop_g,
+                                                                         popFit = self.fitness,
+                                                                         offFit = offSpringFitness,
+                                                                         popConstV = self.constraintsV,
                                                                          direction=self._minMax,
                                                                          offConstV = g)
   else:
-    self.matingPop_inputs = individuals
-    self.matingPop_fitness = individualFitness
-    self.matingPop_objvals = objectiveVal
-    self.matingPop_g = g
+    self.population = offSprings
+    self.fitness = offSpringFitness
+    self.constraintsV = g
