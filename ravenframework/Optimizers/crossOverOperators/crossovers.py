@@ -276,7 +276,11 @@ def updateFATypes(sourceLoc,sourceDecoded,faType,child,parent,eqobj):
     at a given location, all associated reloaded FA's must also have their FA types updated.
   """
   sourceLocsList = [(sourceLoc,sourceDecoded[1]+1)] # position, batch number
+  antihang = 0
   while len(sourceLocsList) != 0:
+    antihang += 1
+    if antihang >= 10000:
+      raise ValueError("uniformEQCrossoverMethod failed to update FA types in chromosome; possible recursive reloading detected in generated shuffling scheme.")
     pos, batchNum = sourceLocsList.pop()
     #!NOTE(rollnk):this behavior of passing an eqchecker attribute into an eqchecker function is temporary until the EQ functions can be merged into the PRLO plugin.
     reloadFAID = eqobj.encodeFAID((pos,batchNum,sourceDecoded[2]),eqobj.prloData.solnLen,eqobj.prloData.numBatches) # calculate ID for fuel of type sourceDecoded[2] and batch batchNum at location pos
