@@ -816,6 +816,7 @@ class GeneticAlgorithm(RavenSampled):
       self._closeTrajectory(t, 'cancel', 'Currently GA is single trajectory', 0)
     self.incrementIteration(traj)
 
+
     currentPopInputs = datasetToDataArray(rlz, list(self.toBeSampled))
 
     currentPop_objvals = []
