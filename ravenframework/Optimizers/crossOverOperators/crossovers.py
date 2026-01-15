@@ -23,11 +23,12 @@
 """
 
 import numpy as np
+from copy import deepcopy
 from scipy.special import comb
 from itertools import combinations
 import xarray as xr
 from ...utils import randomUtils
-from ...utils.utils import EQchecker
+from ...utils.EQChecker import EQChecker
 
 
 # @profile
@@ -98,12 +99,22 @@ def uniformCrossover(parents,**kwargs):
   else:
     crossoverProb = kwargs['crossoverProb']
 
+  # check for EQ input
+  EQFlag = False
+  if any("prlodata" in sublist for sublist in kwargs["files"]):
+    inpfile = [sublist[-1] for sublist in kwargs["files"] if sublist[1]=='prlodata'][0]
+    EQObject = EQChecker(inpfile.getPath()+inpfile.getFilename())
+    EQFlag = True if EQObject.prloData.calculationType == "eq_cycle" else False
+
   index = 0
   parentsPairs = list(combinations(parents,2))
   for parentPair in parentsPairs:
     parent1 = parentPair[0].values
     parent2 = parentPair[1].values
-    children1,children2 = uniformCrossoverMethod(parent1,parent2,crossoverProb)
+    if not EQFlag:
+      children1,children2 = uniformCrossoverMethod(parent1,parent2,crossoverProb)
+    else:
+      children1,children2 = uniformEQCrossoverMethod(parent1,parent2,crossoverProb,EQObject)
     children[index]   = children1
     children[index+1] = children2
     index +=  2
@@ -154,62 +165,12 @@ def twoPointsCrossover(parents, **kwargs):
 
   return children
 
-def EQCrossover(parents,**kwargs):
-  """
-    Method designed to perform crossover by mixing chromosome for EQ problem
-    @ In, parents, xr.DataArray, parents involved in the mating process.
-    @ In, kwargs, dict, dictionary of parameters for this mutation method:
-          crossoverProb, float, crossoverProb determines when child takes genes from a specific parent
-    @ Out, children, np.array, children resulting from the crossover. Shape is nParents x len(chromosome) i.e, number of Genes/Vars
-  """
-  nParents,nGenes = np.shape(parents)
-  # Number of children = 2* (nParents choose 2)
-  children = xr.DataArray(np.zeros((int(2*comb(nParents,2)),nGenes)),
-                          dims=['chromosome','Gene'],
-                          coords={'chromosome': np.arange(int(2*comb(nParents,2))),
-                                  'Gene':kwargs['variables']})
-
-
-  # defaults
-  if (kwargs['crossoverProb'] == None) or ('crossoverProb' not in kwargs.keys()):
-    crossoverProb = randomUtils.random(dim=1, samples=1)
-  else:
-    crossoverProb = kwargs['crossoverProb']
-
-  # check EQ input 
-  if kwargs['EQfiles'] is None:
-    raise ValueError('EQ files is None, this is not allowed for this EQCrossOver type, please check!')
-  else:
-    tempfiles = kwargs['EQfiles']
-    temp = [sublist[-1] for sublist in tempfiles if sublist[1]=='simulatedata'][0]
-    xmlfile = temp.getPath()+ temp.getFilename()
-    temp = [sublist[-1] for sublist in tempfiles if sublist[1]=='EQinput'][0]
-    inpfile = temp.getPath()+temp.getFilename()
-    EQobject = EQchecker(xmlinput=xmlfile, EQinput=inpfile)
-  index = 0
-  parentsPairs = list(combinations(parents,2))
-  for parentPair in parentsPairs:
-    parent1 = parentPair[0].T.values.tolist()
-    parent2 = parentPair[1].T.values.tolist()
-    if randomUtils.random(dim=1,samples=1) <= crossoverProb:
-      children1,children2 = EQobject.mutate2genome(parent1,parent2)
-      if not EQobject.checkgennome(children1) or not EQobject.checkgennome(children2):
-        children1,children2 = parent1, parent2
-        print('Warning .... no crossover due to violation in both childrens ')
-    else:
-      children1,children2 = parent1, parent2
-    children[index][:]   = np.array(children1)
-    children[index+1][:] = np.array(children2)
-    index +=  2
-  
-  return children
-
 
 __crossovers = {}
 __crossovers['onePointCrossover']  = onePointCrossover
 __crossovers['twoPointsCrossover'] = twoPointsCrossover
 __crossovers['uniformCrossover']   = uniformCrossover
-__crossovers['EQCrossover']         = EQCrossover
+#!__crossovers['EQCrossover']         = EQCrossover #!TODO(rollnk):deprecated; remove.
 
 
 def returnInstance(cls, name):
@@ -270,3 +231,62 @@ def uniformCrossoverMethod(parent1,parent2,crossoverProb):
       children2[pos] = parent2[pos]
 
   return children1,children2
+
+def uniformEQCrossoverMethod(parent1,parent2,crossoverProb,eqchecker):
+  """
+    Method designed to perform a uniform crossover on 2 arrays
+    @ In, parent1: first array
+    @ In, parent2: second array
+    @ In, crossoverProb: crossover probability for each gene
+    @ In, eqchecker: utils.EQChecker object
+    @ Out, child1: first generated array
+    @ Out, child2: second generated array
+  """
+  maxiter = 1000; iter = 0
+  flag = False
+  while not flag:
+    if iter >= maxiter:
+      raise ValueError("UniformEQCrossoverMethod has failed to generate a valid genome.")
+
+    child1 = deepcopy(parent1)
+    child2 = deepcopy(parent2)
+    for pos in range(parent1.size):
+      #!NOTE(rollnk):this behavior of passing an eqchecker attribute into an eqchecker function is temporary until the EQ functions can be merged into the PRLO plugin.
+      p1decoded = eqchecker.decodeFAID(parent1[pos], eqchecker.prloData.solnLen, eqchecker.prloData.numBatches)
+      p2decoded = eqchecker.decodeFAID(parent2[pos], eqchecker.prloData.solnLen, eqchecker.prloData.numBatches)
+      #!TODO(rollnk):This is similar to the ILB method except the reloaded batches aren't randomized; they just receive updated FA types. ONLY FEED BATCH UNDERGOES CROSSOVER.
+      if p1decoded[1] == p2decoded[1] == 1: # only crossover if batch numbers are the same. This comes from the ILB method.
+        if randomUtils.random(dim=1,samples=1)<crossoverProb:
+          child1[pos] = parent2[pos]
+          child2[pos] = parent1[pos]
+          if p1decoded[2] != p2decoded[2]: # FA types don't match; check for reloads and update those FAtypes as well.
+            child1 = updateFATypes(pos+1,p1decoded,p2decoded[2],child1,parent1,eqchecker)
+            child2 = updateFATypes(pos+1,p2decoded,p1decoded[2],child2,parent2,eqchecker)
+
+    #!NOTE(rollnk):this behavior of passing an eqchecker attribute into an eqchecker function is temporary until the EQ functions can be merged into the PRLO plugin.
+    flag = all((eqchecker.checkGenome(child1,eqchecker.prloData.symmetricMultiplicity),
+                eqchecker.checkGenome(child2,eqchecker.prloData.symmetricMultiplicity)))
+    iter += 1
+
+  return child1,child2
+
+def updateFATypes(sourceLoc,sourceDecoded,faType,child,parent,eqobj):
+  """
+    Utility for the uniformEQCrossoverMethod. If a crossover operation results in a different FA type
+    at a given location, all associated reloaded FA's must also have their FA types updated.
+  """
+  sourceLocsList = [(sourceLoc,sourceDecoded[1]+1)] # position, batch number
+  antihang = 0
+  while len(sourceLocsList) != 0:
+    antihang += 1
+    if antihang >= 10000:
+      raise ValueError("uniformEQCrossoverMethod failed to update FA types in chromosome; possible recursive reloading detected in generated shuffling scheme.")
+    pos, batchNum = sourceLocsList.pop()
+    #!NOTE(rollnk):this behavior of passing an eqchecker attribute into an eqchecker function is temporary until the EQ functions can be merged into the PRLO plugin.
+    reloadFAID = eqobj.encodeFAID((pos,batchNum,sourceDecoded[2]),eqobj.prloData.solnLen,eqobj.prloData.numBatches) # calculate ID for fuel of type sourceDecoded[2] and batch batchNum at location pos
+    updatedFAID = eqobj.encodeFAID((pos,batchNum,faType),eqobj.prloData.solnLen,eqobj.prloData.numBatches) # calculate ID for fuel of type faType and batch batchNum at location pos
+    reloadLocs = [i for i in range(len(parent)) if parent[i] == reloadFAID]
+    for i in reloadLocs:
+      sourceLocsList.append((i+1,batchNum+1))
+      child[i] = updatedFAID
+  return child

@@ -385,22 +385,40 @@ class RavenSampled(Optimizer):
       self.raiseAnError(RuntimeError, f'There is no optimization history for traj {traj}! ' +
                         'Perhaps the Model failed?')
 
-    ## If any solution in the population has a higher fitness value than what is found in ._optPointHistory, add it to opt.
+    ## If any solution in the population has a higher fitness value than what is found in ._optPointHistory, add it to opt. NOTE: this only searches the most recent iteration of the optimizer.
     opt = self._optPointHistory[traj][-1][0]
     fitnessVars = [var for var in list(opt) if 'fitness' in var.lower()]
     self._solutionExport.asDataset() #empty _collector into _data
+    ## Search the rest of the population
     if hasattr(self,"_sampledPopulationInfo"):
-      for soln in self._sampledPopulationInfo:
-        if (self._sampledPopulationInfo[soln] > [max(opt[key]) for key in fitnessVars]).any(): #if any fitness value in soln is greater than the all corresponding fitness values in opt, this is True.
+      bestInPopulation = {}
+      # find best solns from the population
+      for soln1 in self._sampledPopulationInfo:
+          if not bestInPopulation:
+              bestInPopulation[soln1] = self._sampledPopulationInfo[soln1]
+          else:
+              for soln2 in copy.deepcopy(bestInPopulation):
+                  if (self._sampledPopulationInfo[soln1] > bestInPopulation[soln2]).all():
+                      del bestInPopulation[soln2] #replace previous entry with better one
+                      bestInPopulation[soln1] = self._sampledPopulationInfo[soln1]
+                  elif (self._sampledPopulationInfo[soln1] > bestInPopulation[soln2]).any():
+                      bestInPopulation[soln1] = self._sampledPopulationInfo[soln1]
+      # try to add best solns to list of optimal solns
+      for soln in bestInPopulation:
+        if (bestInPopulation[soln] > [max(opt[key]) for key in fitnessVars]).any(): #if any fitness value in soln is greater than all corresponding fitness values in opt, this is True.
             for indx in range(len(self._solutionExport._data[list(self._solutionExport._data)[0]])): #search the population data for the inputs in soln
               if np.all(np.array(soln) == [self._solutionExport._data[key][indx].item() for key in self.toBeSampled]):
                 # add soln values from population data to opt
                 for key in list(opt):
                   try:
-                    opt[key] = np.append(opt[key], self._solutionExport._data[key][indx].item())
+                    if key in self._objectiveVar:
+                      minMaxC = {'max':-1, 'min':1} #convert objective scales to the expected format in 'opt'
+                      opt[key] = np.append(opt[key], self._solutionExport._data[key][indx].item() * minMaxC[self._minMax[self._objectiveVar.index(key)]])
+                    else:
+                      opt[key] = np.append(opt[key], self._solutionExport._data[key][indx].item())
                   except KeyError:
-                    continue #!TODO: repeated issue with "ConstraintEvaluation" not being stored in self._solutionExport._data
-                break #it shouldn't be possible, but this would fail silently if soln isn't found in the population data
+                    opt[key] = np.append(opt[key], None) #If the key is missing from solutionExport, it isn't in the addRealization and won't be used anyway.
+                break # NOTE: it shouldn't be possible, but this would fail silently if soln isn't found in the population data
 
     #Note: bestTraj == traj
     for i in range(len(np.atleast_1d(opt[self._objectiveVar[0]]))):
@@ -714,6 +732,12 @@ class RavenSampled(Optimizer):
         toExport[var] = rlz[var]
     # formatting
     toExport = dict((var, np.atleast_1d(val)) for var, val in toExport.items())
+    # Force solutionExport to expect all the vars we want to give it.
+    for key in toExport.keys():
+      if key not in self._solutionExport.vars:
+        self._solutionExport.addedVars.append(key)
+    self._solutionExport.addedVars = list(set(self._solutionExport.addedVars))
+    # Write solution data to solutionExport
     self._solutionExport.addRealization(toExport)
 
   def _addToSolutionExport(self, traj, rlz, acceptable):
