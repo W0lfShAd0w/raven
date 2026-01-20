@@ -104,7 +104,7 @@ def uniformCrossover(parents,**kwargs):
   if any("prlodata" in sublist for sublist in kwargs["files"]):
     inpfile = [sublist[-1] for sublist in kwargs["files"] if sublist[1]=='prlodata'][0]
     EQObject = EQChecker(inpfile.getPath()+inpfile.getFilename())
-    EQFlag = True if EQObject.prloData.calculationType == "eq_cycle" else False
+    EQFlag = True if EQObject.prloData.calculationType in ["eq_cycle","eq_uprate"] else False
 
   index = 0
   parentsPairs = list(combinations(parents,2))
