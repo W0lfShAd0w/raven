@@ -22,6 +22,9 @@
         using Feature to validate Target comparing to the Target prior.
         The output name convention is 'pri_post_stdReduct_'+&quot;Target name&quot;.
     </description>
+    <revisions>
+      <revision author="rollnk" date="2025-09-10">'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py.</revision>
+    </revisions>
   </TestInfo>
 
   <Files>

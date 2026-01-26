@@ -12,6 +12,9 @@
       Each sample in this test converges towards the analytic solutions discussed in the &quot;changing lower, upper bounds&quot; section of
       the &quot;attenuate&quot; analytic model documentation.
     </analytic>
+    <revisions>
+      <revision author="rollnk" date="2025-09-10">'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py.</revision>
+    </revisions>
   </TestInfo>
 
   <RunInfo>

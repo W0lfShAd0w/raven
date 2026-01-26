@@ -25,6 +25,7 @@
     </description>
     <revisions>
       <revision author="dhuang" date="2021-08-26">...</revision>
+      <revision author="rollnk" date="2025-09-10">'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py.</revision>
     </revisions>
   </TestInfo>
 

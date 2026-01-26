@@ -13,6 +13,9 @@
       (see Gelman et al., 1995), which is of the form 1/det(Cov)**(3/2).
       A uniform distribution [-0.07, 0.07] is used as the proposal distribution.
     </description>
+    <revisions>
+      <revision author="rollnk" date="2025-09-10">'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py.</revision>
+    </revisions>
   </TestInfo>
 
   <RunInfo>
@@ -55,13 +58,7 @@
       </samplerInit>
       <likelihood log="True">pout</likelihood>
       <variable name="rho">
-        <!--
-           instead to use
-          <distribution>normal</distribution>
-          , use a user defined function
-        -->
         <probabilityFunction class="Functions" type="External">prior</probabilityFunction>
-        <!-- in this case, initial are required parameter -->
         <initial>0</initial>
         <proposal class="Distributions" type="Uniform">uniform</proposal>
       </variable>

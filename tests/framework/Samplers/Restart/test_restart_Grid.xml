@@ -20,6 +20,9 @@
       In the end, &quot;fine.csv&quot; and &quot;restart.csv&quot; should have identical input space, but different output space;
       all the output of &quot;fine.csv&quot; should be 2.0, while the restarted points in &quot;restart.csv&quot; should be 1.0
     </description>
+    <revisions>
+      <revision author="rollnk" date="2025-09-10">'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py.</revision>
+    </revisions>
   </TestInfo>
 
   <Steps>
@@ -98,8 +101,6 @@
 
   <Models>
     <Dummy name="MyDummy" subType=""/>
-    <!-- The &quot;coarsemod&quot; model will output a reponse of 1.0, while &quot;finemod&quot; gives 2.0.
-         This allows the test to distinguish which samples originated in &quot;coarse&quot; and which in &quot;fine&quot;.-->
     <ExternalModel ModuleToLoad="../coarse" name="coarsemod" subType="">
       <variables>x1,x2,ans</variables>
     </ExternalModel>

@@ -20,6 +20,9 @@
       In the end, &quot;fine.csv&quot; and &quot;restart.csv&quot; should have identical input space, but different output space;
       all the output of &quot;fine.csv&quot; should be 2.0, while the restarted points in &quot;restart.csv&quot; should be 1.0
     </description>
+    <revisions>
+      <revision author="rollnk" date="2025-09-10">'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py.</revision>
+    </revisions>
   </TestInfo>
 
   <Steps>

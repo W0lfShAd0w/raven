@@ -18,6 +18,7 @@
     </description>
     <revisions>
       <revision author="aalfonsi" date="2022-11-16">Added feature selection test for SKlearn model</revision>
+      <revision author="rollnk" date="2025-09-10">'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py.</revision>
     </revisions>
   </TestInfo>
 
@@ -67,7 +68,6 @@
   <ExternalXML node="Samplers" xmlToLoad="sharedXMLblocks/sharedSamplers.xml"/>
   <ExternalXML node="Steps" xmlToLoad="sharedXMLblocks/sharedSteps.xml"/>
   <OutStreams>
-    <!-- A csv file containing the output of the example -->
     <Print name="outData">
       <type>csv</type>
       <source>outData</source>

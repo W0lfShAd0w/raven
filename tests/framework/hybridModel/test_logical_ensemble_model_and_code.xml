@@ -8,6 +8,9 @@
     <description>
      This test is aimed to show how to use a LogicalModel (or HybridModel) within an EnsembleModel.
     </description>
+    <revisions>
+      <revision author="rollnk" date="2025-09-10">'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py.</revision>
+    </revisions>
   </TestInfo>
 
   <RunInfo>

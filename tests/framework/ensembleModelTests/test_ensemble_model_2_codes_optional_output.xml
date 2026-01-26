@@ -11,6 +11,7 @@
     </description>
     <revisions>
       <revision author="alfoa" date="2017-07-10">Modified test in order to show how to use a HDF5 as optional output (Issue #237)</revision>
+      <revision author="rollnk" date="2025-09-10">'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py.</revision>
     </revisions>
   </TestInfo>
 

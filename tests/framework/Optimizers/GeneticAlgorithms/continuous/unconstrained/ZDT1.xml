@@ -44,6 +44,9 @@ obj_2     *                  o
             0            0.2          0.4          0.6          0.8            1.0
                                           obj_1 = x_1
     </description>
+    <revisions>
+      <revision author="rollnk" date="2025-09-10">'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py.</revision>
+    </revisions>
   </TestInfo>
 
   <RunInfo>
@@ -108,11 +111,9 @@ obj_2     *                  o
         </fitness>
         <survivorSelection>rankNcrowdingBased</survivorSelection>
       </GAparams>
-
       <convergence>
         <AHDp>0.0</AHDp>
       </convergence>
-
       <variable name="x1">
         <distribution>unifDist</distribution>
       </variable>
@@ -155,7 +156,6 @@ obj_2     *                  o
     <PointSet name="opt_export">
       <Input>trajID</Input>
       <Output>x1,x2,x3,obj1,obj2,age,batchId,rank,CD,FitnessEvaluation_obj1,FitnessEvaluation_obj2,accepted </Output>
-      <!--Modify if necessary CD,iteration,accepted,conv_AHDp-->
     </PointSet>
   </DataObjects>
 

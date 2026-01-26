@@ -17,6 +17,7 @@
       <revision author="chenj" date="2016-10-31">Regold parallel EnsembleModel test since change in the optimization algorithm</revision>
       <revision author="alfoa" date="2016-11-14">New syntax ensemble</revision>
       <revision author="alfoa" date="2017-01-21">Adding this test description.</revision>
+      <revision author="rollnk" date="2025-09-10">'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py.</revision>
     </revisions>
   </TestInfo>
 

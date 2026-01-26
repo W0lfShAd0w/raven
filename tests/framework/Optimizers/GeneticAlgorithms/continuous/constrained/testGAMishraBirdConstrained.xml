@@ -16,6 +16,9 @@
     <analytic>
       This test uses Mishra function.
     </analytic>
+    <revisions>
+      <revision author="rollnk" date="2025-09-10">'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py.</revision>
+    </revisions>
   </TestInfo>
 
   <RunInfo>

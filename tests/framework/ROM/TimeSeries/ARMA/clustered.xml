@@ -10,6 +10,7 @@
     </description>
     <revisions>
       <revision author="talbpaul" date="2020-01-18">added sampling, clarified to clustered representation</revision>
+      <revision author="rollnk" date="2025-09-10">'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py.</revision>
     </revisions>
   </TestInfo>
 
@@ -61,9 +62,6 @@
     <DataSet name="synthetic">
       <Input>Signal</Input>
       <Index var="Time">Signal</Index>
-      <!--
-        <Index var="_ROM_cluster">cluster_multiplicity</Index>
-      -->
     </DataSet>
     <DataSet name="romMeta"/>
   </DataObjects>
@@ -80,9 +78,6 @@
       <Segment grouping="cluster">
         <Classifier class="Models" type="PostProcessor">classifier</Classifier>
         <subspace divisions="10" shift="first">Time</subspace>
-        <!--
-          <evalMode>clustered</evalMode>
-        -->
       </Segment>
     </ROM>
     <PostProcessor name="classifier" subType="DataMining">

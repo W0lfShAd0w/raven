@@ -23,6 +23,7 @@
       </revision>
       <revision author="talbpaul" date="2018-09-13">changed Pmax and Pmin to P (same for Q)</revision>
       <revision author="talbpaul" date="2019-01-30">reduced test to match what is tested, removed stat printing in favor of rom meta XML</revision>
+      <revision author="rollnk" date="2025-09-10">'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py.</revision>
     </revisions>
   </TestInfo>
 

@@ -10,6 +10,7 @@
     </description>
     <revisions>
       <revision author="alfoa" date="2021-10-29">Added test to testify the fix for issue #1700</revision>
+      <revision author="rollnk" date="2025-09-10">'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py.</revision>
     </revisions>
     <requirements>R-IS-3</requirements>
   </TestInfo>

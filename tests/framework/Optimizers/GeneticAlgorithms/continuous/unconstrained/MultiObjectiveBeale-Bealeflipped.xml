@@ -12,6 +12,9 @@
     opt point is: (3,0.5)
     optimal value is zero (i.e., obj1 = f(3,0.5) = 0, obj2 = -f(3,0.5 = 0) )
     </description>
+    <revisions>
+      <revision author="rollnk" date="2025-09-10">'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py.</revision>
+    </revisions>
   </TestInfo>
 
   <RunInfo>

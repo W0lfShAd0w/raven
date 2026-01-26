@@ -13,6 +13,7 @@
         Adding two separate Fourier nodes, one for each signal, to test resolved issue within
         Interpolated ROMCollection Segment type.
       </revision>
+      <revision author="rollnk" date="2025-09-10">'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py.</revision>
     </revisions>
   </TestInfo>
 

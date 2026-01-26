@@ -16,6 +16,7 @@
       <revision author="alfoa" date="2016-12-01">Fixed order of objects in test inputs in order to respect the XSD schema</revision>
       <revision author="alfoa" date="2017-01-21">Adding this test description.</revision>
       <revision author="alfoa" date="2018-02-03">Modified test for the new DataObject system. Usage of DataSet.</revision>
+      <revision author="rollnk" date="2025-09-10">'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py.</revision>
     </revisions>
   </TestInfo>
 
@@ -55,10 +56,6 @@
           heatTransfer
         <Input class="DataObjects" type="PointSet">inputHolder</Input>
         <TargetEvaluation class="DataObjects" type="DataSet">heatTransferContainer</TargetEvaluation>
-        <!--
-           *** New way to work with &quot;time-series&quot; in the input space is the DataSet ***
-          <TargetEvaluation class="DataObjects" type="PointSet">heatTransferContainer</TargetEvaluation>
-        -->
       </Model>
     </EnsembleModel>
   </Models>
@@ -230,19 +227,9 @@
         <pivotParameter>timeFromFirstModel</pivotParameter>
       </options>
     </HistorySet>
-    <!--
-     The way we store the timeseries (or any other dimensional array) in the input space is changed in the new DataObject structure
-     the PointSet is not adequate anymore. WE MUST USE THE DataSet (see below)
-      <PointSet name="heatTransferContainer">
-        <Input>leftTemperature,rightTemperature,k,timeFromFirstModel</Input>
-        <Output>solution</Output>
-      </PointSet>
-    -->
     <DataSet name="heatTransferContainer">
-      <!-- This is the new way to store and pass information in case not-scalar values are stored in the input space -->
       <Input>leftTemperature,rightTemperature,k,timeFromFirstModel</Input>
       <Output>solution</Output>
-      <!-- with the Index XML block, we are informing RAVEN that &quot;k&quot; in the dataobject is a dependent variable and depens on &quot;timeFromFirstModel&quot; -->
       <Index var="timeFromFirstModel">k</Index>
     </DataSet>
   </DataObjects>

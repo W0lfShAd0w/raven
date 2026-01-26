@@ -22,6 +22,7 @@
     <revisions>
       <revision author="talbpaul" date="2018-09-25">implicit nested group usage instead of explicit</revision>
       <revision author="talbpaul" date="2020-10-15">empty vg with comment</revision>
+      <revision author="rollnk" date="2025-09-10">'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py.</revision>
     </revisions>
   </TestInfo>
 
@@ -36,7 +37,6 @@
     <Group name="intersect">x_even, ^x_first</Group>
     <Group name="sym_diff">x_odd, % x_first</Group>
     <Group name="empty">
-      <!-- comment -->
     </Group>
     <Group name="emptier"/>
   </VariableGroups>

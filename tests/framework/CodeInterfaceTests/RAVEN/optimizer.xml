@@ -12,6 +12,9 @@
       Outer raven runs an optimizer by changing the upper and lower bounds of the sampledVars distribution on the inner raven.
       Inner raven runs 100 MC samples, does basic stats, and returns the mean, sigma to the outer raven.
     </description>
+    <revisions>
+      <revision author="rollnk" date="2025-09-10">'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py.</revision>
+    </revisions>
   </TestInfo>
 
   <RunInfo>
@@ -26,9 +29,6 @@
     <MultiRun name="sample">
       <Input class="Files" type="raven">inner_input</Input>
       <Model class="Models" type="Code">raven</Model>
-      <!--
-        <Sampler class="Samplers" type="Grid">grid</Sampler>
-      -->
       <Optimizer class="Optimizers" type="GradientDescent">opter</Optimizer>
       <SolutionExport class="DataObjects" type="PointSet">opt_export</SolutionExport>
       <Output class="DataObjects" type="PointSet">outer_samples</Output>

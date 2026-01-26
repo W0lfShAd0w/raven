@@ -10,6 +10,9 @@
       The 3 basic functionalities are testes:
       1) row-based projection, 2) pivot-value-based projection and 3) operator-based projection (max, min, average)
     </description>
+    <revisions>
+      <revision author="rollnk" date="2025-09-10">'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py.</revision>
+    </revisions>
   </TestInfo>
 
   <RunInfo>
@@ -185,70 +188,60 @@
   </DataObjects>
 
   <Steps>
-    <!-- create data-->
     <MultiRun name="CreateData">
       <Input class="DataObjects" type="PointSet">inputPlaceHolder</Input>
       <Model class="Models" type="ExternalModel">simple_model</Model>
       <Sampler class="Samplers" type="MonteCarlo">MC_external</Sampler>
       <Output class="DataObjects" type="HistorySet">outMC</Output>
     </MultiRun>
-    <!-- apply row-based projection -->
     <PostProcess name="PP_HStoPSoperatorRows">
       <Input class="DataObjects" type="HistorySet">outMC</Input>
       <Model class="Models" type="PostProcessor">HStoPSoperatorRows</Model>
       <Output class="DataObjects" type="PointSet">out_PP_HStoPSRows</Output>
       <Output class="OutStreams" type="Print">out_PP_HStoPSRows_dump</Output>
     </PostProcess>
-    <!-- apply pivot-value-based projection Nearest-->
     <PostProcess name="PP_HStoPSoperatorPivotValuesNearest">
       <Input class="DataObjects" type="HistorySet">outMC</Input>
       <Model class="Models" type="PostProcessor">HStoPSoperatorPivotValuesNearest</Model>
       <Output class="DataObjects" type="PointSet">out_PP_HStoPSPivotValuesNearest</Output>
       <Output class="OutStreams" type="Print">out_PP_HStoPSPivotValuesNearest_dump</Output>
     </PostProcess>
-    <!-- apply pivot-value-based projection Interpolate-->
     <PostProcess name="PP_HStoPSoperatorPivotValuesInterpolate">
       <Input class="DataObjects" type="HistorySet">outMC</Input>
       <Model class="Models" type="PostProcessor">HStoPSoperatorPivotValuesInterpolate</Model>
       <Output class="DataObjects" type="PointSet">out_PP_HStoPSPivotValuesInterpolate</Output>
       <Output class="OutStreams" type="Print">out_PP_HStoPSPivotValuesInterpolate_dump</Output>
     </PostProcess>
-    <!-- apply pivot-value-based projection Nearest floor-->
     <PostProcess name="PP_HStoPSoperatorPivotValuesNearestFloor">
       <Input class="DataObjects" type="HistorySet">outMC</Input>
       <Model class="Models" type="PostProcessor">HStoPSoperatorPivotValuesNearestFloor</Model>
       <Output class="DataObjects" type="PointSet">out_PP_HStoPSPivotValuesNearestFloor</Output>
       <Output class="OutStreams" type="Print">out_PP_HStoPSPivotValuesNearestFloor_dump</Output>
     </PostProcess>
-    <!-- apply pivot-value-based projection Nearest Celing-->
     <PostProcess name="PP_HStoPSoperatorPivotValuesNearestCeling">
       <Input class="DataObjects" type="HistorySet">outMC</Input>
       <Model class="Models" type="PostProcessor">HStoPSoperatorPivotValuesNearestCeling</Model>
       <Output class="DataObjects" type="PointSet">out_PP_HStoPSPivotValuesNearestCeling</Output>
       <Output class="OutStreams" type="Print">out_PP_HStoPSPivotValuesNearestCeling_dump</Output>
     </PostProcess>
-    <!-- apply operator-based projection Max -->
     <PostProcess name="PP_HStoPSoperatorOperatorMax">
       <Input class="DataObjects" type="HistorySet">outMC</Input>
       <Model class="Models" type="PostProcessor">HStoPSoperatorOperatorMax</Model>
       <Output class="DataObjects" type="PointSet">out_PP_HStoPSPivotOperatorMax</Output>
       <Output class="OutStreams" type="Print">out_PP_HStoPSPivotOperatorMax_dump</Output>
     </PostProcess>
-    <!-- apply operator-based projection Min -->
     <PostProcess name="PP_HStoPSoperatorOperatorMin">
       <Input class="DataObjects" type="HistorySet">outMC</Input>
       <Model class="Models" type="PostProcessor">HStoPSoperatorOperatorMin</Model>
       <Output class="DataObjects" type="PointSet">out_PP_HStoPSPivotOperatorMin</Output>
       <Output class="OutStreams" type="Print">out_PP_HStoPSPivotOperatorMin_dump</Output>
     </PostProcess>
-    <!-- apply operator-based projection Average -->
     <PostProcess name="PP_HStoPSoperatorOperatorAverage">
       <Input class="DataObjects" type="HistorySet">outMC</Input>
       <Model class="Models" type="PostProcessor">HStoPSoperatorOperatorAverage</Model>
       <Output class="DataObjects" type="PointSet">out_PP_HStoPSPivotOperatorAverage</Output>
       <Output class="OutStreams" type="Print">out_PP_HStoPSPivotOperatorAverage_dump</Output>
     </PostProcess>
-    <!-- apply operator-based projection All -->
     <PostProcess name="PP_HStoPSoperatorOperatorAll">
       <Input class="DataObjects" type="HistorySet">outMC</Input>
       <Model class="Models" type="PostProcessor">HStoPSoperatorOperatorAll</Model>

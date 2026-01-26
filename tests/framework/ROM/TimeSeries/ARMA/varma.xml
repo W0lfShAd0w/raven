@@ -23,13 +23,13 @@
           In this case, only the user requested variables as specified in the DataObjects are printed out.
       </revision>
       <revision author="talbpaul" date="2018-09-13">changed Pmax and Pmin to P (same for Q)</revision>
+      <revision author="rollnk" date="2025-09-10">'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py.</revision>
     </revisions>
   </TestInfo>
 
   <RunInfo>
     <WorkingDir>VARMA</WorkingDir>
     <Sequence>read,train,rommeta,sample,write,load,stats</Sequence>
-    <!-- NOTE: the dump, unpickle steps have been removed until statsmodel 0.9 is in RAVEN's library set. See issue #916. -->
     <batchSize>1</batchSize>
     <globalSeed>5489</globalSeed>
   </RunInfo>

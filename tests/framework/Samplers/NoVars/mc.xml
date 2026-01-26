@@ -10,6 +10,9 @@
       While not precisely analytic, the samples pointset should contain
       two realizations, each with values 1, 2, 3 for x1, x2, and x3.
     </description>
+    <revisions>
+      <revision author="rollnk" date="2025-09-10">'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py.</revision>
+    </revisions>
   </TestInfo>
 
   <RunInfo>
