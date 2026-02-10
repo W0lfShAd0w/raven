@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
+import os, re
 import numpy as np
 from xml.etree import ElementTree as ET
 from ravenframework.utils import randomUtils
@@ -85,7 +85,7 @@ class EQChecker():
       This is a trimmed down version of the PARCSv345InpGen.PRLODataParser class.
       #!NOTE(rollnk): it is likely more elegant to have a single, external version of this class rather than redefine it repeatedly.
     """
-    def __init__(self, inputFile):
+    def __init__(self, inputFile, verbosity="full"):
       """
         Constructor.
         @ In, inputFile, string, xml PARCSv345 parameters file
@@ -97,36 +97,68 @@ class EQChecker():
 
       # Parse user-provided data from XML file
       #!TODO: define default values for missing params; list expected formats/units here.
-      self.calculationType = '_'.join(root.find('calculationType').text.strip().lower().split())
-      self.numAssemblies = int(root.find('numAssemblies').text.strip())
-      self.numBatches = int(root.find('numBatches').text.strip())
-      self.feedBatchSizeLimits = root.find('feedBatchSizeLimits').text.strip() if root.find('feedBatchSizeLimits') is not None else None
-      self.colLabels = root.find('colLabels').text.strip()
-      self.rowLabels = root.find('rowLabels').text.strip()
-      self.geometry = root.find('geometry').text.strip()
-      self.coreShape = root.find('coreShape').text
-      self.faDict = []
-      for fa in root.iter('FA'):
-        self.faDict.append(fa.attrib)
-      self.numTypes = len([fa for fa in self.faDict if fa['type'] == 'fuel'])
-      self.xsDict =[]
-      for xs in root.iter('XS'):
-        self.xsDict.append(xs.attrib)
+      if verbosity in ['calcType','full','reduced']:
+        self.calculationType = '_'.join(root.find('calculationType').text.strip().lower().split()) if root.find('calculationType') is not None else "single_cycle"
+      if verbosity in ['full','reduced']:
+        self.numAssemblies = int(root.find('numAssemblies').text.strip())
+        self.numBatches = int(root.find('numBatches').text.strip())
+        self.feedBatchSizeLimits = root.find('feedBatchSizeLimits').text.strip() if root.find('feedBatchSizeLimits') is not None else None
+        self.colLabels = root.find('colLabels').text.strip()
+        self.rowLabels = root.find('rowLabels').text.strip()
+        self.geometry = root.find('geometry').text.strip()
+        #!self.coreShape = root.find('coreShape').text # DEPRECATED
+        self.coreShape = re.sub(r"\d{2}",'1',re.sub(r"r\d",'0',self.geometry.replace('00','  ')))
+        self.faDict = []
+        for fa in root.iter('FA'):
+          self.faDict.append(fa.attrib)
+        self.numTypes = len([fa for fa in self.faDict if fa['type'] == 'fuel'])
+        self.xsDict =[]
+        for xs in root.iter('XS'):
+          self.xsDict.append(xs.attrib)
 
-      # Resolve calculated values from user-provided data
-      fuelMap = [int(s) for s in self.geometry.strip().split() if s.isdigit()]
-      self.solnLen = max(fuelMap)
-      self.symmetricMultiplicity = {i:fuelMap.count(i) for i in fuelMap}
-
-      if not self.feedBatchSizeLimits:
-        self.feedBatchSizeLimits = (np.ceil(self.numAssemblies/self.numBatches),self.numAssemblies) # logical extremes for feed batch size
-      else:
-        self.feedBatchSizeLimits = tuple([int(val.strip()) for val in self.feedBatchSizeLimits.replace(',',' ').split()])
-        if len(self.feedBatchSizeLimits) == 1:
-          # if only one value is given, assume that value is the maximum limit.
-          self.feedBatchSizeLimits = (np.ceil(self.numAssemblies/self.numBatches),self.feedBatchSizeLimits[0])
+        # Resolve calculated values from user-provided data
+        if not self.feedBatchSizeLimits:
+          self.feedBatchSizeLimits = (np.ceil(self.numAssemblies/self.numBatches),self.numAssemblies) # logical extremes for feed batch size
         else:
-          self.feedBatchSizeLimits = (self.feedBatchSizeLimits[0],self.feedBatchSizeLimits[-1]) #ensure only two values are provided.
+          self.feedBatchSizeLimits = tuple([int(val.strip()) for val in self.feedBatchSizeLimits.replace(',',' ').split()])
+          if len(self.feedBatchSizeLimits) == 1:
+            # if only one value is given, assume that value is the maximum limit.
+            self.feedBatchSizeLimits = (np.ceil(self.numAssemblies/self.numBatches),self.feedBatchSizeLimits[0])
+          else:
+            self.feedBatchSizeLimits = (self.feedBatchSizeLimits[0],self.feedBatchSizeLimits[-1]) #ensure only two values are provided.
+
+      if verbosity in ['full']:
+        self.useTemplate = self.str_to_bool(root.find('useTemplate').text.strip()) if root.find('useTemplate') is not None else False
+        self.THFlag = self.str_to_bool(root.find('THFlag').text.strip()) if root.find('THFlag') is not None else False
+        self.power = float(root.find('power').text.strip()) if root.find('power') is not None else 100.0
+        self.coreType = root.find('coreType').text.strip().upper() if root.find('coreType') is not None else "PWR"
+        self.initialExposure = float(root.find('initialExposure').text.strip()) if root.find('initialExposure') is not None else 0.00
+        self.initialBoron = int(root.find('initialBoron').text.strip())
+        self.pinPowerRecFlag = self.str_to_bool(root.find('pinPowerRecFlag').text.strip())
+        self.numAxial = int(root.find('numAxial').text.strip())
+        self.gridX = root.find('gridX').text.strip()
+        self.gridY = root.find('gridY').text.strip()
+        self.gridZ = root.find('gridZ').text.strip()
+        self.neutmeshX = root.find('neutmeshX').text.strip()
+        self.neutmeshY = root.find('neutmeshY').text.strip()
+        self.BC = root.find('BC').text.strip()
+        self.faPower = float(root.find('faPower').text.strip())
+        self.faPitch = float(root.find('faPitch').text.strip())
+        self.inletTemp = float(root.find('inletTemp').text.strip())
+        self.flow = float(root.find('flow').text.strip()) #!TODO: I believe this is mass flow; doublecheck
+        self.depHistory = root.find('depHistory').text.strip()
+        self.inpHistFile = root.find('inpHistFile').text.strip() if root.find('inpHistFile') is not None else None
+        #!self.xsDir = root.find('xsDir').text.strip() #!TODO(rollnk):deprecated, remove.
+        self.xsLib = root.find('xsLib').text.strip()
+        self.xsExtension = root.find('xsExtension').text.strip()
+
+    def str_to_bool(self,string):
+      if string.lower() in ['t','true','1','yes','y']:
+        return True
+      elif string.lower() in ['f','false','0','no','n']:
+        return False
+      else:
+        raise ValueError(f"Failed to convert string '{string}' to boolean.")
 
   def decodeFAID(self,faID,solnLen,numBatches):
     """
