@@ -309,8 +309,10 @@ additional path that will be added to the PYTHONPATH (e.g. path of python script
 
 %%%%%% globalSeed
 \item \xmlNode{globalSeed}, \xmlDesc{integer, optional field}, specifies the numerical seed to be used when initializing the random number
-generator (RNG) for the RAVEN calculation. The generator used is the numpy library by default. The initial seed is printed to the RAVEN log
-file. A value of \texttt{None} can also be provided to request a high entropy initial seed be automatically generated.
+generator (RNG) for the RAVEN calculation. The generator used is the numpy library by default. A value of \texttt{LegacyNone} can be
+provided to request that the system clock be used as a source of entropy for generating integer-based seeds. The initial seed used or requested
+is printed to the RAVEN log file. A value of \texttt{None} can also be provided to request that a high entropy initial seed be automatically generated,
+however the resulting generator initial state cannot be represented with an integer seed value which may lead to reproducibility issues.
 %
 \default{None}
 

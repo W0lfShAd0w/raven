@@ -740,13 +740,13 @@ class Simulation(MessageUser):
         self.__modeHandlerDict[modeName] = module.__dict__[modeClass]
       elif element.tag == 'globalSeed': #this is needed for reproducibility in case the RNG is called before a standard seeding step.
         parsedSeed = True
-        globalSeed = int(element.text) if element.text.lower() != 'none' else None
-        self.raiseADebug('Setting RAVEN RNG seed to',globalSeed)
-        randomSeed(globalSeed) #Reinstance the global generator with the requested seed.
+        globalSeed = int(element.text) if "none" not in element.text.lower() else element.text
+        globalSeed = randomSeed(globalSeed) #Reinstance the global generator with the requested seed.
+        self.raiseAMessage(f"globalSeed recognized in RunInfo.\nSetting RAVEN RNG seed to: {globalSeed}")
       else:
         self.raiseAnError(IOError, f'RunInfo element "{element.tag}" unknown!')
     if not parsedSeed:
-      self.raiseADebug('No globalSeed specified in RunInfo, defaulting to a high entropy RNG state.')
+      self.raiseAMessage("No globalSeed specified in RunInfo.\nSetting RAVEN RNG seed to: 5489")
 
   def printDicts(self):
     """
