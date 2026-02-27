@@ -77,7 +77,7 @@ def swapMutatorEQ(offSprings, distDict, **kwargs):
     inpfile = [sublist[-1] for sublist in kwargs["files"] if sublist[1]=='prlodata'][0]
     EQObject = EQChecker(inpfile.getPath()+inpfile.getFilename())
     symMult = EQObject.prloData.symmetricMultiplicity
-    EQFlag = True if EQObject.prloData.calculationType == "eq_cycle" else False
+    EQFlag = True if EQObject.prloData.calculationType in ["eq_cycle","eq_uprate"] else False
   if not EQFlag:
     raise ValueError("'swapMutatorEQ' is only appropriate of the 'eq_cycle' calculationType.")
 
