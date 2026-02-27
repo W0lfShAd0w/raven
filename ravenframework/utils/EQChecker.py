@@ -108,6 +108,7 @@ class EQChecker():
         self.geometry = root.find('geometry').text.strip()
         #!self.coreShape = root.find('coreShape').text # DEPRECATED
         self.coreShape = re.sub(r"\d{2}",'1',re.sub(r"r\d",'0',self.geometry.replace('00','  ')))
+        self.solnLen = max([int(s) for s in self.geometry.split() if s.isdigit()])
         self.faDict = []
         for fa in root.iter('FA'):
           self.faDict.append(fa.attrib)
@@ -151,6 +152,10 @@ class EQChecker():
         #!self.xsDir = root.find('xsDir').text.strip() #!TODO(rollnk):deprecated, remove.
         self.xsLib = root.find('xsLib').text.strip()
         self.xsExtension = root.find('xsExtension').text.strip()
+
+        fuelMap = [int(s) for s in self.geometry.split() if s.isdigit()]
+        self.symmetricMultiplicity = {i:fuelMap.count(i) for i in fuelMap}
+        del self.symmetricMultiplicity[0] #locations are 1-indexed; '0' is the void space.
 
     def str_to_bool(self,string):
       if string.lower() in ['t','true','1','yes','y']:
