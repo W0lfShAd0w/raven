@@ -360,8 +360,6 @@ class GeneticAlgorithm(RavenSampled):
     self._repairInstance = None                                  # instance of repair
     self._canHandleMultiObjective = True                         # boolean indicator whether optimization is a sinlge-objective problem or a multi-objective problem
     self._sampledPopulationInfo = {}                             # stores population and fitness info
-    # Deduplication: skip re-evaluation of previously evaluated individuals
-    self._deduplication = False                                  # on/off toggle for skipping duplicate evaluations
   ##########################
   # Initialization Methods #
   ##########################
@@ -394,7 +392,7 @@ class GeneticAlgorithm(RavenSampled):
                             individual solutions, introducing diversity into the population and enabling exploration of new regions in the solution space.
                             Crossover, on the other hand, mimics genetic recombination by exchanging genetic material between two parent solutions to create
                             offspring with combined traits. Survivor selection determines which solutions will advance to the next generation based on
-                            their fitness—how well they perform in solving the problem at hand. Solutions with higher fitness scores are more likely to
+                            their fitness-how well they perform in solving the problem at hand. Solutions with higher fitness scores are more likely to
                             survive and reproduce, passing their genetic material to subsequent generations. This iterative process continues
                             until a stopping criterion is met, typically when a satisfactory solution is found or after a predetermined number of generations.
                             More information can be found in:\\\\
@@ -575,19 +573,6 @@ class GeneticAlgorithm(RavenSampled):
     fitness.addSub(normalizeFitness)
     GAparams.addSub(fitness)
 
-    # Deduplication
-    deduplication = InputData.parameterInputFactory('deduplication', strictMode=True,
-        contentType=InputTypes.BoolType,
-        printPriority=108,
-        descr=r"""If True, enables deduplication of the population across generations.
-                  When a new generation of children is created, any individual whose
-                  gene combination has already been evaluated in a previous generation
-                  will be skipped (not submitted for simulation), saving computational cost.
-                  The optimizer tracks all uniquely evaluated individuals using a
-                  memory-efficient set of hash keys.
-                  \default{False}""")
-    GAparams.addSub(deduplication)
-
     specs.addSub(GAparams)
 
     # convergence
@@ -753,13 +738,6 @@ class GeneticAlgorithm(RavenSampled):
         self.raiseAnError(IOError, f'The number of penaltyCoeff. in <b> should be identical with the number of objective in <objective> and the number of constraints (i.e., <Constraint> and <ImplicitConstraint>)')
     self._fitnessInstance = fitnessReturnInstance(self,name = self._fitnessType)
     self._repairInstance = repairReturnInstance(self,name='replacementRepair')  # currently only replacement repair is implemented.
-
-    ####################################################################################
-    # deduplication node                                                               #
-    ####################################################################################
-    deduplicationNode = gaParamsNode.findFirst('deduplication')
-    if deduplicationNode is not None:
-      self._deduplication = deduplicationNode.value
 
     ####################################################################################
     # convergence criterion node                                                       #
@@ -1036,6 +1014,7 @@ class GeneticAlgorithm(RavenSampled):
     info.update({'traj': traj,
                   'step': step
                 })
+    # Keep dedup logic centralized in RavenSampled._queueSubmission.
     return self._queueSubmission(point, info)
 
   def flush(self):

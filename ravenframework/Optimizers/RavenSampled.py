@@ -124,9 +124,9 @@ class RavenSampled(Optimizer):
     self._optPointHistory = {}  # a dictionary of deque's by traj (-1 is most recent)
     self._maxHistLen = 2  # FIXME who should set this?
     self._rerunsSinceAccept = {} # by traj, how long since our last accepted point
-    self._evaluatedSubmissionKeys = set()  # set of previously evaluated sampled points for deduplication
-    self._evaluatedSubmissionData = {}  # map of sampled point key -> normalized realization for dedup reuse
-    self._deduplicatedSubmissions = []  # duplicate submissions to merge during finalize
+    self._evaluatedSubmissionKeys = set()  # Points we already evaluated; used to quickly detect duplicates.
+    self._evaluatedSubmissionData = {}  # Saved result for each evaluated point; duplicates reuse this result.
+    self._deduplicatedSubmissions = []  # Duplicate runs we skipped now and will be restored later from cached results.
     # __private
     self.__stepCounter = {}  # tracks the "generation" or "iteration" of each trajectory -> iteration is defined by inheritor
     # additional methods
@@ -231,8 +231,10 @@ class RavenSampled(Optimizer):
     # if any trajectories are still active, we're ready to provide an input
     ready = Optimizer.amIreadyToProvideAnInput(self)
 
-    # if all rlz are deduplicated, localFinalizeActualSampling (_useRealization) will not run, thus _submissionQueue will be empty.
-    # Multirun will be breaked (line 247 of MultiRun.py) _useRealization for reproduction with deduplicated rlz is applied.
+    # This guard is checked in amIreadyToProvideAnInput, before localFinalizeActualSampling is called.
+    # If all realizations are deduplicated, localFinalizeActualSampling (and therefore _useRealization)
+    # is not called, so _submissionQueue remains empty. In that case, MultiRun would stop early
+    # (see line 247 of MultiRun.py), so we replay deduplicated realizations through _useRealization.
     if ready and len(self._submissionQueue) == 0 and self._deduplicatedSubmissions and len(self._prefixToIdentifiers) == 0:
       self.raiseADebug('No queued runs remain; restoring deduplicated submissions from cache.')
       restoredInfo, restoredRlz = self._restoreDeduplicatedSubmissions()
@@ -334,6 +336,13 @@ class RavenSampled(Optimizer):
     for objVar in self._objectiveVar:
       rlz[objVar] *= self._objMult[objVar] #multiply by -1 to maximize obj or by 1 to minimize obj
     # TODO FIXME let normalizeData work on an xr.DataSet (batch) not just a dictionary!
+    # NOTE:
+    # Previously we called _useRealization(info, rlz) directly here.
+    # With dedup enabled, skipped duplicates never produce a fresh model result, so we must:
+    #  1) normalize and cache the current realization by submission key,
+    #  2) restore any pending deduplicated submissions from cache,
+    #  3) forward one merged/restored payload to _useRealization.
+    # This keeps optimizer state transitions identical for both evaluated and deduplicated points.
     rlz = self.normalizeData(rlz)
     self._cacheEvaluatedSubmissionPoints(rlz)
     restoredInfo, restoredRlz = self._restoreDeduplicatedSubmissions(info, rlz)
