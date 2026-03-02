@@ -360,7 +360,6 @@ class GeneticAlgorithm(RavenSampled):
     self._repairInstance = None                                  # instance of repair
     self._canHandleMultiObjective = True                         # boolean indicator whether optimization is a sinlge-objective problem or a multi-objective problem
     self._sampledPopulationInfo = {}                             # stores population and fitness info
-
   ##########################
   # Initialization Methods #
   ##########################
@@ -393,7 +392,7 @@ class GeneticAlgorithm(RavenSampled):
                             individual solutions, introducing diversity into the population and enabling exploration of new regions in the solution space.
                             Crossover, on the other hand, mimics genetic recombination by exchanging genetic material between two parent solutions to create
                             offspring with combined traits. Survivor selection determines which solutions will advance to the next generation based on
-                            their fitness—how well they perform in solving the problem at hand. Solutions with higher fitness scores are more likely to
+                            their fitness-how well they perform in solving the problem at hand. Solutions with higher fitness scores are more likely to
                             survive and reproduce, passing their genetic material to subsequent generations. This iterative process continues
                             until a stopping criterion is met, typically when a satisfactory solution is found or after a predetermined number of generations.
                             More information can be found in:\\\\
@@ -573,6 +572,7 @@ class GeneticAlgorithm(RavenSampled):
         descr=r""" normalize: input and output data will be normalized prior to calculating fitness for each iteration of the optimizer. \default{zscore}""")
     fitness.addSub(normalizeFitness)
     GAparams.addSub(fitness)
+
     specs.addSub(GAparams)
 
     # convergence
@@ -818,7 +818,6 @@ class GeneticAlgorithm(RavenSampled):
 
 
     currentPopInputs = datasetToDataArray(rlz, list(self.toBeSampled))
-
     currentPop_objvals = []
     for i in range(len(self._objectiveVar)):
       currentPop_objvals.append(list(np.atleast_1d(rlz[self._objectiveVar[i]].data)))
@@ -983,12 +982,19 @@ class GeneticAlgorithm(RavenSampled):
                                         'Gene':list(self.toBeSampled)})
 
   ## 10. Submit children batch
+      # First, build a list of all children as dicts
+      childrenToSubmit = []
+
       # Submit children coordinates (x1,...,xm), i.e., self.childrenCoordinates
       for i in range(self.batch):
         newRlz = {}
         for _, var in enumerate(self.toBeSampled.keys()):
           newRlz[var] = float(daChildren.loc[i, var].values)
-        self._submitRun(newRlz, traj, self.getIteration(traj))
+
+        childrenToSubmit.append(newRlz)
+
+      for child in childrenToSubmit:
+        self._submitRun(child, traj, self.getIteration(traj))
 
   ## 11. Save grandparents
     self.prevPop_inputs = deepcopy(currentPopInputs)
@@ -1000,7 +1006,7 @@ class GeneticAlgorithm(RavenSampled):
       @ In, traj, int, trajectory identifier
       @ In, step, int, iteration number identifier
       @ In, moreInfo, dict, optional, additional run-identifying information to track
-      @ Out, None
+      @ Out, queued, bool, True if the run was queued
     """
     info = {}
     if moreInfo is not None:
@@ -1008,10 +1014,8 @@ class GeneticAlgorithm(RavenSampled):
     info.update({'traj': traj,
                   'step': step
                 })
-    # NOTE: Currently, GA treats explicit and implicit constraints similarly
-    # while box constraints (Boundary constraints) are automatically handled via limits of the distribution
-    self.raiseADebug(f'Adding run to queue: {self.denormalizeData(point)} | {info}')
-    self._submissionQueue.append((point, info))
+    # Keep dedup logic centralized in RavenSampled._queueSubmission.
+    return self._queueSubmission(point, info)
 
   def flush(self):
     """
