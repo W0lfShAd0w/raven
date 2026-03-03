@@ -108,6 +108,7 @@ class EQChecker():
         self.geometry = root.find('geometry').text.strip()
         #!self.coreShape = root.find('coreShape').text # DEPRECATED
         self.coreShape = re.sub(r"\d{2}",'1',re.sub(r"r\d",'0',self.geometry.replace('00','  ')))
+        self.solnLen = max([int(s) for s in self.geometry.split() if s.isdigit()])
         self.faDict = []
         for fa in root.iter('FA'):
           self.faDict.append(fa.attrib)
@@ -136,11 +137,6 @@ class EQChecker():
         self.initialBoron = int(root.find('initialBoron').text.strip())
         self.pinPowerRecFlag = self.str_to_bool(root.find('pinPowerRecFlag').text.strip())
         self.numAxial = int(root.find('numAxial').text.strip())
-        self.gridX = root.find('gridX').text.strip()
-        self.gridY = root.find('gridY').text.strip()
-        self.gridZ = root.find('gridZ').text.strip()
-        self.neutmeshX = root.find('neutmeshX').text.strip()
-        self.neutmeshY = root.find('neutmeshY').text.strip()
         self.BC = root.find('BC').text.strip()
         self.faPower = float(root.find('faPower').text.strip())
         self.faPitch = float(root.find('faPitch').text.strip())
@@ -148,9 +144,12 @@ class EQChecker():
         self.flow = float(root.find('flow').text.strip()) #!TODO: I believe this is mass flow; doublecheck
         self.depHistory = root.find('depHistory').text.strip()
         self.inpHistFile = root.find('inpHistFile').text.strip() if root.find('inpHistFile') is not None else None
-        #!self.xsDir = root.find('xsDir').text.strip() #!TODO(rollnk):deprecated, remove.
         self.xsLib = root.find('xsLib').text.strip()
         self.xsExtension = root.find('xsExtension').text.strip()
+
+        fuelMap = [int(s) for s in self.geometry.split() if s.isdigit()]
+        self.symmetricMultiplicity = {i:fuelMap.count(i) for i in fuelMap}
+        del self.symmetricMultiplicity[0] #locations are 1-indexed; '0' is the void space.
 
     def str_to_bool(self,string):
       if string.lower() in ['t','true','1','yes','y']:

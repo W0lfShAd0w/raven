@@ -113,14 +113,14 @@ def swapMutatorEQ(offSprings, distDict, **kwargs):
         updatedFA = EQObject.encodeFAID((loc2+1,decodedFA[1]+1,decodedFA[2]), EQObject.prloData.solnLen, EQObject.prloData.numBatches)
         for pos in range(np.shape(children[i])[0]):
           if children[i,pos] == reloadedFA:
-            children[i,pos] == updatedFA
+            children[i,pos] = updatedFA
         ##  check loc2
         decodedFA = EQObject.decodeFAID(int(offSprings[i,loc2].values), EQObject.prloData.solnLen, EQObject.prloData.numBatches)
         reloadedFA = EQObject.encodeFAID((loc2+1,decodedFA[1]+1,decodedFA[2]), EQObject.prloData.solnLen, EQObject.prloData.numBatches)
         updatedFA = EQObject.encodeFAID((loc1+1,decodedFA[1]+1,decodedFA[2]), EQObject.prloData.solnLen, EQObject.prloData.numBatches)
         for pos in range(np.shape(children[i])[0]):
           if children[i,pos] == reloadedFA:
-            children[i,pos] == updatedFA
+            children[i,pos] = updatedFA
 
       flag = EQObject.checkGenome(children[i],symMult)
 
