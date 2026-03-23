@@ -491,7 +491,7 @@ class GeneticAlgorithm(RavenSampled):
                   \item \textit{randomMutator} - It randomly selects a gene within an chromosome and mutates the gene.
                 \end{itemize} """)
     mutation.addParam("type",
-                      InputTypes.makeEnumType('mutation','mutationType',['swapMutator','scrambleMutator','inversionMutator','randomMutator','swapMutatorEQ']),
+                      InputTypes.makeEnumType('mutation','mutationType',['swapMutator','scrambleMutator','inversionMutator','randomMutator','swapMutatorSS']),
                       True,
                       descr="type of mutation operation to be used. See the list of options above.")
     mutationLocs = InputData.parameterInputFactory('locs', strictMode=True,
@@ -854,7 +854,7 @@ class GeneticAlgorithm(RavenSampled):
           if np.isnan(currentPop_g[i][j]):
             currentPop_g[i][j] = 0.0
 
-  ## 3. Compute fitness for the offspring
+  ## 3. Compute fitness for the current population
     currentPopFitness = self._fitnessInstance(norm_rlz,
                                                objVar=self._objectiveVar,
                                                a=self._objCoeff,
@@ -863,6 +863,12 @@ class GeneticAlgorithm(RavenSampled):
                                                constraintFunction=currentPop_g,
                                                constraintNum=self._numOfConst,
                                                type=self._minMax)
+
+
+  ## # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # ##
+  ## Begin reproduction methods. From this point, current population is now  ##
+  ## considered the "parents" generation.                                    ##
+  ## # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # ##
 
     if self._activeTraj:
   ## 4. Survivor selection
