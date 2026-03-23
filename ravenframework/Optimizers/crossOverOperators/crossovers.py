@@ -28,7 +28,7 @@ from scipy.special import comb
 from itertools import combinations
 import xarray as xr
 from ...utils import randomUtils
-from ...utils.EQChecker import EQChecker
+from ...utils.SSChecker import EQChecker, SingleCycleChecker
 
 
 # @profile
@@ -99,22 +99,28 @@ def uniformCrossover(parents,**kwargs):
   else:
     crossoverProb = kwargs['crossoverProb']
 
-  # check for EQ input
+  # check for EQ or single-cycle (Nth cycle) input
   EQFlag = False
+  SCFlag = False
   if any("prlodata" in sublist for sublist in kwargs["files"]):
     inpfile = [sublist[-1] for sublist in kwargs["files"] if sublist[1]=='prlodata'][0]
     EQObject = EQChecker(inpfile.getPath()+inpfile.getFilename())
-    EQFlag = True if EQObject.prloData.calculationType in ["eq_cycle","eq_uprate"] else False
+    EQFlag = EQObject.prloData.calculationType in ["eq_cycle","eq_uprate"]
+    SCFlag = EQObject.prloData.calculationType in ["single_cycle","single_uprate"] and EQObject.prloData.numBatches > 1
+  if SCFlag:
+    SCObject = SingleCycleChecker(inpfile.getPath()+inpfile.getFilename())
 
   index = 0
   parentsPairs = list(combinations(parents,2))
   for parentPair in parentsPairs:
     parent1 = parentPair[0].values
     parent2 = parentPair[1].values
-    if not EQFlag:
-      children1,children2 = uniformCrossoverMethod(parent1,parent2,crossoverProb)
-    else:
+    if EQFlag:
       children1,children2 = uniformEQCrossoverMethod(parent1,parent2,crossoverProb,EQObject)
+    elif SCFlag:
+      children1,children2 = uniformSCCrossoverMethod(parent1,parent2,crossoverProb,SCObject)
+    else:
+      children1,children2 = uniformCrossoverMethod(parent1,parent2,crossoverProb)
     children[index]   = children1
     children[index+1] = children2
     index +=  2
@@ -164,7 +170,6 @@ def twoPointsCrossover(parents, **kwargs):
     index = index + 2
 
   return children
-
 
 __crossovers = {}
 __crossovers['onePointCrossover']  = onePointCrossover
@@ -264,8 +269,8 @@ def uniformEQCrossoverMethod(parent1,parent2,crossoverProb,eqchecker):
             child2 = updateFATypes(pos+1,p2decoded,p1decoded[2],child2,parent2,eqchecker)
 
     #!NOTE(rollnk):this behavior of passing an eqchecker attribute into an eqchecker function is temporary until the EQ functions can be merged into the PRLO plugin.
-    flag = all((eqchecker.checkGenome(child1,eqchecker.prloData.symmetricMultiplicity),
-                eqchecker.checkGenome(child2,eqchecker.prloData.symmetricMultiplicity)))
+    flag = all((eqchecker.checkGenome(child1,eqchecker.prloData.symmetricMultiplicity)[0],
+                eqchecker.checkGenome(child2,eqchecker.prloData.symmetricMultiplicity)[0]))
     iter += 1
 
   return child1,child2
@@ -290,3 +295,80 @@ def updateFATypes(sourceLoc,sourceDecoded,faType,child,parent,eqobj):
       sourceLocsList.append((i+1,batchNum+1))
       child[i] = updatedFAID
   return child
+
+def uniformSCCrossoverMethod(parent1,parent2,crossoverProb,scchecker):
+  """
+    Method designed to perform a uniform crossover on 2 arrays for the single-cycle
+    (Nth cycle) shuffling scheme.
+
+    Genes are swapped in a single pass with demand-tracking feasibility checks so
+    that the children are always valid without rejection sampling.  Three classes of
+    position are handled:
+      - fresh-fresh (batchNum==1 in both parents): swap is unconditionally valid
+        because each fresh gene encodes sourceLoc==i+1 by construction.
+      - reload-reload (batchNum==2 in both parents): swap is accepted only when the
+        updated source-location demand in each child does not exceed symMult.
+      - mixed (batchNums differ): skipped so that each child inherits its base
+        parent's fresh-fuel count, preserving the feedBatchSize constraint.
+
+    @ In, parent1, numpy.array, first parent chromosome
+    @ In, parent2, numpy.array, second parent chromosome
+    @ In, crossoverProb, float, per-gene crossover probability
+    @ In, scchecker, SingleCycleChecker, logical constraint handler for single-cycle cases.
+    @ Out, child1, numpy.array, first generated child chromosome
+    @ Out, child2, numpy.array, second generated child chromosome
+  """
+  solnLen   = scchecker.prloData.solnLen
+  numBatches= scchecker.prloData.numBatches
+  symMult   = scchecker.prloData.symmetricMultiplicity
+
+  child1 = deepcopy(parent1)
+  child2 = deepcopy(parent2)
+
+  # Decode all genes once to avoid repeated calls inside the loop.
+  decoded1 = [scchecker.decodeFAID(int(g), solnLen, numBatches) for g in parent1]
+  decoded2 = [scchecker.decodeFAID(int(g), solnLen, numBatches) for g in parent2]
+
+  # Initialise per-source demand counters for each child (reload genes only).
+  d1 = {s:0 for s in range(1,len(parent1)+1)}  # demand on each source location in child1
+  d2 = {s:0 for s in range(1,len(parent2)+1)}  # demand on each source location in child2
+  for i in range(len(parent1)):
+    if decoded1[i][1] == 2:
+      s = decoded1[i][0]; d1[s] += symMult[i+1]
+    if decoded2[i][1] == 2:
+      s = decoded2[i][0]; d2[s] += symMult[i+1]
+
+  for i in range(len(parent1)):
+    b1 = decoded1[i][1]
+    b2 = decoded2[i][1]
+
+    if b1 != b2:
+      continue  # mixed position: skip to preserve fresh-fuel counts in each child
+
+    if randomUtils.random(dim=1,samples=1) >= crossoverProb:
+      continue
+
+    if b1 == 1:
+      # Fresh-fresh swap: always valid.
+      child1[i] = parent2[i]
+      child2[i] = parent1[i]
+
+    else:  # b1 == b2 == 2
+      sl1 = decoded1[i][0]  # current source of child1[i]
+      sl2 = decoded2[i][0]  # current source of child2[i]
+      if sl1 == sl2:
+        continue  # same source; swap is a no-op
+      myMult = symMult[i+1]
+      # Accept swap only if neither child's source-location demand is exceeded.
+      if (d1.get(sl2,0) + myMult <= symMult[sl2] and
+          d2.get(sl1,0) + myMult <= symMult[sl1]):
+        child1[i] = parent2[i]
+        child2[i] = parent1[i]
+        d1[sl1] -= myMult;  d1[sl2] += myMult
+        d2[sl2] -= myMult;  d2[sl1] += myMult
+
+  if not all((scchecker.checkGenome(child1,symMult)[0],
+              scchecker.checkGenome(child2,symMult)[0])):
+    raise ValueError("uniformSCCrossoverMethod produced an invalid genome; this is a bug.")
+
+  return child1,child2
