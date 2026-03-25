@@ -23,8 +23,14 @@ from __future__ import division, print_function, unicode_literals, absolute_impo
 
 # External Modules----------------------------------------------------------------------------------
 import abc
+import ast
 from collections import deque
 import copy
+import datetime
+import h5py
+import json
+import math
+import os
 import numpy as np
 import xarray as xr
 # External Modules End------------------------------------------------------------------------------
@@ -33,6 +39,86 @@ import xarray as xr
 from ..utils import InputData, InputTypes
 from .Optimizer import Optimizer
 # Internal Modules End------------------------------------------------------------------------------
+
+# Sentinel strings used to represent non-JSON-native float values in checkpoint state.
+_NAN_SENTINEL    = '__checkpoint_nan__'
+_POSINF_SENTINEL = '__checkpoint_inf__'
+_NEGINF_SENTINEL = '__checkpoint_neginf__'
+
+def _encodeCheckpointState(obj):
+  """
+    Recursively converts an optimizer state dict to a JSON-safe representation.
+    Handles numpy scalars/arrays, xarray objects, deques, sets, and tuples.
+    NaN and Inf float values are replaced with sentinel strings.
+    All dict keys are converted to strings (required by JSON).
+    @ In, obj, any, Python object to encode
+    @ Out, obj, any, JSON-serializable representation
+  """
+  if isinstance(obj, float):
+    if math.isnan(obj):  return _NAN_SENTINEL
+    if math.isinf(obj):  return _POSINF_SENTINEL if obj > 0 else _NEGINF_SENTINEL
+    return obj
+  if isinstance(obj, np.floating):
+    return _encodeCheckpointState(float(obj))
+  if isinstance(obj, np.integer):
+    return int(obj)
+  if isinstance(obj, np.bool_):
+    return bool(obj)
+  if isinstance(obj, np.ndarray):
+    return {'__type__': 'ndarray', 'dtype': str(obj.dtype), 'data': obj.tolist()}
+  if isinstance(obj, xr.DataArray):
+    return {'__type__': 'DataArray', 'data': _encodeCheckpointState(obj.to_dict())}
+  if isinstance(obj, xr.Dataset):
+    return {'__type__': 'Dataset', 'data': _encodeCheckpointState(obj.to_dict())}
+  if isinstance(obj, deque):
+    return {'__type__': 'deque', 'maxlen': obj.maxlen,
+            'data': [_encodeCheckpointState(i) for i in obj]}
+  if isinstance(obj, set):
+    return {'__type__': 'set', 'data': [_encodeCheckpointState(i) for i in obj]}
+  if isinstance(obj, tuple):
+    return {'__type__': 'tuple', 'data': [_encodeCheckpointState(i) for i in obj]}
+  if isinstance(obj, dict):
+    # JSON requires string keys; callers must restore original key types on decode.
+    return {str(k): _encodeCheckpointState(v) for k, v in obj.items()}
+  if isinstance(obj, list):
+    return [_encodeCheckpointState(i) for i in obj]
+  return obj  # str, bool, int, None pass through unchanged
+
+def _decodeCheckpointState(obj):
+  """
+    Recursively restores a state dict encoded by _encodeCheckpointState.
+    @ In, obj, any, JSON-decoded Python object
+    @ Out, obj, any, restored Python object with original types
+  """
+  if isinstance(obj, str):
+    if obj == _NAN_SENTINEL:    return float('nan')
+    if obj == _POSINF_SENTINEL: return float('inf')
+    if obj == _NEGINF_SENTINEL: return float('-inf')
+    return obj
+  if isinstance(obj, list):
+    return [_decodeCheckpointState(i) for i in obj]
+  if isinstance(obj, dict):
+    if '__type__' not in obj:
+      return {k: _decodeCheckpointState(v) for k, v in obj.items()}
+    t = obj['__type__']
+    if t == 'ndarray':
+      return np.array(obj['data'], dtype=obj['dtype'])
+    if t == 'deque':
+      return deque((_decodeCheckpointState(i) for i in obj['data']), maxlen=obj['maxlen'])
+    if t == 'set':
+      def _toHashable(x):
+        if isinstance(x, list): return tuple(_toHashable(i) for i in x)
+        return _decodeCheckpointState(x)
+      return set(_toHashable(i) for i in obj['data'])
+    if t == 'tuple':
+      return tuple(_decodeCheckpointState(i) for i in obj['data'])
+    if t == 'DataArray':
+      return xr.DataArray.from_dict(_decodeCheckpointState(obj['data']))
+    if t == 'Dataset':
+      return xr.Dataset.from_dict(_decodeCheckpointState(obj['data']))
+    # Unknown tagged type — return as plain decoded dict
+    return {k: _decodeCheckpointState(v) for k, v in obj.items()}
+  return obj
 
 
 class RavenSampled(Optimizer):
@@ -83,6 +169,31 @@ class RavenSampled(Optimizer):
               of the Optimizer.""")
     init.addSub(limit)
     init.addSub(write)
+
+    writeCheckpoint = InputData.parameterInputFactory('writeCheckpoint',
+        contentType=InputTypes.BoolType,
+        printPriority=105,
+        descr=r"""Enables writing of optimizer state checkpoints after each completed iteration.
+              When \xmlString{True}, the optimizer writes a \texttt{.ravenrst} restart file that
+              can later be provided to \xmlNode{restartFrom} to resume an interrupted run. The
+              optional \xmlAttr{file} attribute sets the checkpoint file path; if omitted, the
+              file is named \texttt{<optimizerName>.ravenrst} in the working directory. The
+              optional \xmlAttr{interval} attribute controls how many completed iterations occur
+              between writes (default: 1).""")
+    writeCheckpoint.addParam('file', InputTypes.StringType, required=False,
+        descr=r"""Path for the checkpoint output file. Defaults to \texttt{<optimizerName>.ravenrst}.""")
+    writeCheckpoint.addParam('interval', InputTypes.IntegerType, required=False,
+        descr=r"""Number of completed iterations between checkpoint writes. Default: 1.""")
+    init.addSub(writeCheckpoint)
+
+    restartFrom = InputData.parameterInputFactory('restartFrom',
+        contentType=InputTypes.StringType,
+        printPriority=106,
+        descr=r"""Path to an existing \texttt{.ravenrst} checkpoint file from which the optimizer
+              should resume. The optimizer validates that the settings in the restart file are
+              compatible with the current XML configuration before restoring state. See
+              \xmlNode{writeCheckpoint} for producing restart files.""")
+    init.addSub(restartFrom)
 
     return specs
 
@@ -139,6 +250,13 @@ class RavenSampled(Optimizer):
     # problem.
     self._objMult = {} #max will be -1, min will be 1
     self._objMultArray = np.array([])
+    # Checkpoint / restart
+    self._writeCheckpointEnabled = False   # whether to write a checkpoint file after each iteration
+    self._checkpointFile = None            # path for the checkpoint output file
+    self._checkpointInterval = 1           # write checkpoint every N completed iterations
+    self._restartFromFile = None           # path to a .ravenrst file to resume from
+    self._checkpointRestored = False       # True after a successful checkpoint restore
+    self.__checkpointIterCount = 0         # iteration counter for interval-based checkpoint writing
 
 
   def handleInput(self, paramInput):
@@ -159,6 +277,20 @@ class RavenSampled(Optimizer):
       writeSteps = init.findFirst('writeSteps')
       if writeSteps is not None:
         self._writeSteps = writeSteps.value
+      # writeCheckpoint
+      writeCheckpointNode = init.findFirst('writeCheckpoint')
+      if writeCheckpointNode is not None and writeCheckpointNode.value:
+        self._writeCheckpointEnabled = True
+        fileAttr = writeCheckpointNode.parameterValues.get('file', None)
+        if fileAttr is not None:
+          self._checkpointFile = fileAttr
+        intervalAttr = writeCheckpointNode.parameterValues.get('interval', None)
+        if intervalAttr is not None:
+          self._checkpointInterval = int(intervalAttr)
+      # restartFrom
+      restartFromNode = init.findFirst('restartFrom')
+      if restartFromNode is not None:
+        self._restartFromFile = restartFromNode.value
     # additional checks
     if self.limit is None:
       self.raiseAnError(IOError, 'A <limit> is required for any RavenSampled Optimizer!')
@@ -181,6 +313,12 @@ class RavenSampled(Optimizer):
     Optimizer.initialize(self, externalSeeding=externalSeeding, solutionExport=solutionExport)
     self.batch = 1
     self.batchId = 0
+    # Set default checkpoint file path now that self.name is available
+    if self._writeCheckpointEnabled and self._checkpointFile is None:
+      self._checkpointFile = f'{self.name}.ravenrst'
+    # If a restart file was provided, restore optimizer state (assembler objects are live at this point)
+    if self._restartFromFile is not None:
+      self._restoreFromCheckpoint()
 
   ###############
   # Run Methods #
@@ -240,6 +378,8 @@ class RavenSampled(Optimizer):
       restoredInfo, restoredRlz = self._restoreDeduplicatedSubmissions()
       if restoredRlz is not None:
         self._useRealization(restoredInfo, restoredRlz)
+        if self._writeCheckpointEnabled:
+          self._writeCheckpoint()
 
     # we're not ready yet if we don't have anything in queue
     ready = ready and len(self._submissionQueue) != 0
@@ -348,6 +488,221 @@ class RavenSampled(Optimizer):
     restoredInfo, restoredRlz = self._restoreDeduplicatedSubmissions(info, rlz)
     if restoredRlz is not None:
       self._useRealization(restoredInfo, restoredRlz)
+      if self._writeCheckpointEnabled:
+        self._writeCheckpoint()
+
+  ###########################
+  # Checkpoint / Restart    #
+  ###########################
+
+  def _getCheckpointSettings(self):
+    """
+      Returns a dict of critical configuration settings to embed in the checkpoint for validation
+      on restart. Subclasses should call super() and add algorithm-specific settings.
+      @ In, None
+      @ Out, settings, dict, configuration settings required for restart compatibility checks
+    """
+    return {
+      'variables':     sorted(self.toBeSampled.keys()),
+      'objectiveVars': self._objectiveVar,
+      'minMax':        self._minMax,
+    }
+
+  def _getCheckpointState(self):
+    """
+      Returns a dict of runtime state variables to be persisted in the checkpoint.
+      Subclasses should call super() and add algorithm-specific state.
+      @ In, None
+      @ Out, state, dict, serializable optimizer runtime state
+    """
+    return {
+      'counter':                  self.counter,
+      'batchId':                  self.batchId,
+      '__stepCounter':            self.__stepCounter,
+      '_stepTracker':             self._stepTracker,
+      '_optPointHistory':         self._optPointHistory,
+      '_rerunsSinceAccept':       self._rerunsSinceAccept,
+      '_activeTraj':              self._activeTraj,
+      '_cancelledTraj':           self._cancelledTraj,
+      '_convergedTraj':           self._convergedTraj,
+      '_trajCounter':             self._trajCounter,
+      '_submissionQueue':         list(self._submissionQueue),
+      '_evaluatedSubmissionKeys': self._evaluatedSubmissionKeys,
+      '_evaluatedSubmissionData': self._evaluatedSubmissionData,
+    }
+
+  def _restoreCheckpointState(self, state):
+    """
+      Restores runtime state variables from a checkpoint state dict.
+      Subclasses should call super() and restore algorithm-specific state.
+      @ In, state, dict, state dict previously produced by _getCheckpointState
+      @ Out, None
+    """
+    self.counter                  = state['counter']
+    self.batchId                  = state['batchId']
+    self._trajCounter             = state['_trajCounter']
+    # Trajectory-indexed dicts have int keys serialized as strings by JSON; restore them.
+    self.__stepCounter            = {int(k): v for k, v in state['__stepCounter'].items()}
+    self._stepTracker             = {int(k): v for k, v in state['_stepTracker'].items()}
+    self._optPointHistory         = {int(k): v for k, v in state['_optPointHistory'].items()}
+    self._rerunsSinceAccept       = {int(k): v for k, v in state['_rerunsSinceAccept'].items()}
+    self._cancelledTraj           = {int(k): v for k, v in state['_cancelledTraj'].items()}
+    self._convergedTraj           = {int(k): v for k, v in state['_convergedTraj'].items()}
+    self._activeTraj              = state['_activeTraj']
+    self._submissionQueue         = deque(state['_submissionQueue'])
+    self._evaluatedSubmissionKeys = state['_evaluatedSubmissionKeys']
+    # Keys are tuple-of-tuples serialized as strings; restore via ast.literal_eval.
+    self._evaluatedSubmissionData = {ast.literal_eval(k): v
+                                     for k, v in state['_evaluatedSubmissionData'].items()}
+
+  def _validateCheckpoint(self, checkpoint):
+    """
+      Validates that a loaded checkpoint is compatible with the current XML configuration.
+      Raises an error for incompatible settings; issues a warning for recoverable differences.
+      Subclasses should call super() and add algorithm-specific validation.
+      @ In, checkpoint, dict, loaded checkpoint dict
+      @ Out, None
+    """
+    currentVersion = '1.0' # Currently supported checkpoint version #NOTE: update this if the checkpoint format is changed.
+    ckptVersion = checkpoint.get('version', '0.0')
+    if ckptVersion != currentVersion:
+      self.raiseAWarning(f'Restart file version "{ckptVersion}" may differ from the current '
+                        f'version {currentVersion}; compatibility is not guaranteed.')
+    ckptType = checkpoint.get('optimizerType', 'unknown')
+    if ckptType != self.__class__.__name__:
+      self.raiseAnError(IOError,
+          f'Restart file was written by optimizer type "{ckptType}" but the current optimizer '
+          f'is "{self.__class__.__name__}". Restart files cannot be used across different optimizer types.')
+    ckptName = checkpoint.get('optimizerName', '')
+    if ckptName != self.name:
+      self.raiseAWarning(f'Restart file optimizer name "{ckptName}" does not match the current '
+                        f'optimizer name "{self.name}". Proceeding with restore.')
+    settings = checkpoint.get('settings', {})
+    ckptVars = settings.get('variables', [])
+    currentVars = sorted(self.toBeSampled.keys())
+    if ckptVars != currentVars:
+      self.raiseAnError(IOError,
+          f'Restart file variable set {ckptVars} does not match the current variable set {currentVars}.')
+    ckptObjs = settings.get('objectiveVars', [])
+    if ckptObjs != self._objectiveVar:
+      self.raiseAnError(IOError,
+          f'Restart file objective variables {ckptObjs} do not match the current objective '
+          f'variables {self._objectiveVar}.')
+    ckptMinMax = settings.get('minMax', [])
+    if ckptMinMax != self._minMax:
+      self.raiseAnError(IOError,
+          f'Restart file min/max settings {ckptMinMax} do not match the current settings {self._minMax}.')
+
+  def _writeCheckpoint(self):
+    """
+      Serializes the current optimizer state to the checkpoint file. Respects the configured
+      write interval; writes are skipped until the interval is reached.
+      @ In, None
+      @ Out, None
+    """
+    self.__checkpointIterCount += 1
+    if self.__checkpointIterCount % self._checkpointInterval != 0:
+      return
+    generation = self.getIteration(self._activeTraj[0]) if self._activeTraj else 0
+    state      = self._getCheckpointState()
+    settings   = self._getCheckpointSettings()
+    # Collect SolutionExport rows for continuous output on restart
+    rows = []
+    if self._solutionExport is not None:
+      try:
+        ds = self._solutionExport.asDataset()
+        if ds is not None and len(ds.data_vars) > 0:
+          nSamples = ds.dims.get('RAVEN_sample_ID', 0)
+          for i in range(nSamples):
+            row = {}
+            for var in ds.data_vars:
+              vals = ds[var].values
+              val  = vals[i] if vals.ndim > 0 else vals.item()
+              row[var] = val.item() if hasattr(val, 'item') else val
+            rows.append(row)
+      except Exception as err:
+        self.raiseAWarning(f'Could not save SolutionExport data to checkpoint: {err}')
+    with h5py.File(self._checkpointFile, 'w') as hf:
+      # Root attributes: human-readable metadata
+      hf.attrs['version']       = '1.0'
+      hf.attrs['optimizerType'] = self.__class__.__name__
+      hf.attrs['optimizerName'] = self.name
+      hf.attrs['generation']    = generation
+      hf.attrs['timestamp']     = datetime.datetime.now().isoformat()
+      # Settings blob (JSON) used by _validateCheckpoint on restart
+      hf.create_dataset('settings', data=np.bytes_(json.dumps(settings)))
+      # Full optimizer state encoded to a JSON-safe dict, stored as a single bytes dataset.
+      # All numpy/xarray/deque/set/tuple types are handled by _encodeCheckpointState.
+      hf.create_dataset('state', data=np.bytes_(json.dumps(_encodeCheckpointState(state))))
+      # SolutionExport: columnar datasets with gzip compression for numerical variables.
+      seGrp = hf.create_group('solutionExport')
+      seGrp.attrs['nRows'] = len(rows)
+      if rows:
+        varData = {}
+        for row in rows:
+          for var, val in row.items():
+            varData.setdefault(var, []).append(val)
+        for var, vals in varData.items():
+          if isinstance(vals[0], str):
+            seGrp.create_dataset(var, data=np.array(vals, dtype=object),
+                                 dtype=h5py.string_dtype())
+          else:
+            seGrp.create_dataset(var, data=np.array(vals),
+                                 compression='gzip', compression_opts=4)
+    self.raiseAMessage(f'Checkpoint written to "{self._checkpointFile}" (generation {generation}).')
+
+  def _restoreFromCheckpoint(self):
+    """
+      Loads a checkpoint file, validates it against the current configuration, and restores
+      optimizer state. Also pre-populates the SolutionExport DataObject with historical rows
+      so the output file appears continuous.
+      @ In, None
+      @ Out, None
+    """
+    if not os.path.exists(self._restartFromFile):
+      self.raiseAnError(IOError, f'Restart file "{self._restartFromFile}" not found.')
+    self.raiseAMessage(f'Loading restart file "{self._restartFromFile}" ...')
+    rows = []
+    with h5py.File(self._restartFromFile, 'r') as hf:
+      # Build a metadata dict from root attributes for use by _validateCheckpoint
+      checkpoint = {
+        'version':       hf.attrs.get('version', '0.0'),
+        'optimizerType': hf.attrs.get('optimizerType', 'unknown'),
+        'optimizerName': hf.attrs.get('optimizerName', ''),
+        'generation':    hf.attrs.get('generation', 'unknown'),
+        'settings':      json.loads(hf['settings'][()]),
+      }
+      # Validate settings before touching any runtime state
+      self._validateCheckpoint(checkpoint)
+      # Decode and restore the full optimizer state
+      state = _decodeCheckpointState(json.loads(hf['state'][()]))
+      self._restoreCheckpointState(state)
+      # Reconstruct SolutionExport rows from the columnar datasets
+      seGrp = hf.get('solutionExport')
+      if seGrp is not None and seGrp.attrs.get('nRows', 0) > 0 and self._solutionExport is not None:
+        nRows    = int(seGrp.attrs['nRows'])
+        varNames = list(seGrp.keys())
+        for i in range(nRows):
+          row = {}
+          for var in varNames:
+            val = seGrp[var][i]
+            if isinstance(val, bytes):
+              val = val.decode('utf-8')
+            elif hasattr(val, 'item'):
+              val = val.item()
+            row[var] = val
+          rows.append(row)
+    if rows and self._solutionExport is not None:
+      try:
+        for row in rows:
+          self._solutionExport.addRealization(row)
+        self.raiseAMessage(f'Restored {len(rows)} SolutionExport row(s) from restart file.')
+      except Exception as err:
+        self.raiseAWarning(f'Could not restore SolutionExport data from restart file: {err}')
+    self._checkpointRestored = True
+    gen = checkpoint.get('generation', 'unknown')
+    self.raiseAMessage(f'Successfully resumed optimizer "{self.name}" from restart file '
+                      f'"{self._restartFromFile}" (last completed generation: {gen}).')
 
   def finalizeSampler(self, failedRuns): #!TODO: is this unused??
     """
