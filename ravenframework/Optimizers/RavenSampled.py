@@ -602,8 +602,11 @@ class RavenSampled(Optimizer):
     """
     self.__checkpointIterCount += 1
     if self.__checkpointIterCount % self._checkpointInterval != 0:
+      self.raiseADebug(f'Checkpoint write skipped '
+                       f'({self.__checkpointIterCount % self._checkpointInterval} / {self._checkpointInterval} intervals elapsed).')
       return
     generation = self.getIteration(self._activeTraj[0]) if self._activeTraj else 0
+    self.raiseAMessage(f'Writing checkpoint for generation {generation} to "{self._checkpointFile}" ...')
     state      = self._getCheckpointState()
     settings   = self._getCheckpointSettings()
     # Collect SolutionExport rows for continuous output on restart
@@ -620,6 +623,7 @@ class RavenSampled(Optimizer):
               val  = vals[i] if vals.ndim > 0 else vals.item()
               row[var] = val.item() if hasattr(val, 'item') else val
             rows.append(row)
+        self.raiseADebug(f'Collected {len(rows)} SolutionExport row(s) for checkpoint.')
       except Exception as err:
         self.raiseAWarning(f'Could not save SolutionExport data to checkpoint: {err}')
     with h5py.File(self._checkpointFile, 'w') as hf:
@@ -649,7 +653,8 @@ class RavenSampled(Optimizer):
           else:
             seGrp.create_dataset(var, data=np.array(vals),
                                  compression='gzip', compression_opts=4)
-    self.raiseAMessage(f'Checkpoint written to "{self._checkpointFile}" (generation {generation}).')
+    self.raiseAMessage(f'Checkpoint written to "{self._checkpointFile}" '
+                       f'(generation {generation}, {len(rows)} SolutionExport row(s) saved).')
 
   def _restoreFromCheckpoint(self):
     """
@@ -672,26 +677,35 @@ class RavenSampled(Optimizer):
         'generation':    hf.attrs.get('generation', 'unknown'),
         'settings':      json.loads(hf['settings'][()]),
       }
+      self.raiseAMessage(f'Restart file metadata: optimizer "{checkpoint["optimizerName"]}" '
+                         f'(type: {checkpoint["optimizerType"]}, version: {checkpoint["version"]}, '
+                         f'generation: {checkpoint["generation"]}).')
       # Validate settings before touching any runtime state
       self._validateCheckpoint(checkpoint)
+      self.raiseAMessage('Restart file validated successfully against current configuration.')
       # Decode and restore the full optimizer state
+      self.raiseAMessage('Restoring optimizer state ...')
       state = _decodeCheckpointState(json.loads(hf['state'][()]))
       self._restoreCheckpointState(state)
+      self.raiseAMessage(f'Optimizer state restored: counter={self.counter}, batchId={self.batchId}, '
+                         f'active trajectories={self._activeTraj}, '
+                         f'converged trajectories={list(self._convergedTraj.keys())}.')
       # Reconstruct SolutionExport rows from the columnar datasets
       seGrp = hf.get('solutionExport')
       if seGrp is not None and seGrp.attrs.get('nRows', 0) > 0 and self._solutionExport is not None:
         nRows    = int(seGrp.attrs['nRows'])
         varNames = list(seGrp.keys())
+        self.raiseAMessage(f'Reading {nRows} SolutionExport row(s) from restart file ...')
         for i in range(nRows):
           row = {}
           for var in varNames:
             val = seGrp[var][i]
             if isinstance(val, bytes):
               val = val.decode('utf-8')
-            elif hasattr(val, 'item'):
-              val = val.item()
-            row[var] = val
+            row[var] = np.atleast_1d(val)
           rows.append(row)
+      elif self._solutionExport is not None:
+        self.raiseADebug('No SolutionExport data found in restart file.')
     if rows and self._solutionExport is not None:
       try:
         for row in rows:

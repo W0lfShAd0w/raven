@@ -1131,9 +1131,10 @@ class GeneticAlgorithm(RavenSampled):
     self.ahdp                = state['ahdp']
     self.ahd                 = state['ahd']
     self.hdsm                = state['hdsm']
-    self._convergenceInfo    = state['_convergenceInfo']
-    self._acceptHistory      = state['_acceptHistory']
-    self._acceptRerun        = state['_acceptRerun']
+    # Trajectory-indexed dicts have int keys serialized as strings by JSON; restore them.
+    self._convergenceInfo    = {int(k): v for k, v in state['_convergenceInfo'].items()}
+    self._acceptHistory      = {int(k): v for k, v in state['_acceptHistory'].items()}
+    self._acceptRerun        = {int(k): v for k, v in state['_acceptRerun'].items()}
 
   def _validateCheckpoint(self, checkpoint):
     """
