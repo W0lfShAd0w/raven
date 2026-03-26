@@ -768,6 +768,10 @@ class GeneticAlgorithm(RavenSampled):
     meta = ['batchId']
     self.addMetaKeys(meta)
     self.batch = self._populationSize
+    if self._checkpointRestored:
+      # Submission queue already populated from checkpoint state; skip initial population submission.
+      self.raiseAMessage('Resuming from checkpoint; skipping initial population submission.')
+      return
     if self._populationSize != len(self._initialValues):
       self.raiseAnError(IOError, f'Number of initial values provided for each variable is {len(self._initialValues)}, while the population size is {self._populationSize}')
     for _, init in enumerate(self._initialValues):
@@ -1050,6 +1054,108 @@ class GeneticAlgorithm(RavenSampled):
 
   # END queuing Runs
   # * * * * * * * * * * * * * * * *
+
+  ###########################
+  # Checkpoint / Restart    #
+  ###########################
+
+  def _getCheckpointSettings(self):
+    """
+      Returns GA-specific configuration settings for restart validation, merged with the base class settings.
+      @ In, None
+      @ Out, settings, dict, configuration settings required for restart compatibility checks
+    """
+    settings = RavenSampled._getCheckpointSettings(self)
+    settings['populationSize']   = self._populationSize
+    settings['isMultiObjective'] = self._isMultiObjective
+    return settings
+
+  def _getCheckpointState(self):
+    """
+      Returns GA-specific runtime state merged with the base class state.
+      @ In, None
+      @ Out, state, dict, serializable optimizer runtime state
+    """
+    state = RavenSampled._getCheckpointState(self)
+    state.update({
+      'matingPopInputs':      self.matingPopInputs,
+      'matingPopObjVals':     self.matingPopObjVals,
+      'matingPopAges':        self.matingPopAges,
+      'matingPopFitness':     self.matingPopFitness,
+      'matingPopRanks':       self.matingPopRanks,
+      'matingPop_g':          self.matingPop_g,
+      'matingPopCD':          self.matingPopCD,
+      'prevPop_inputs':       self.prevPop_inputs,
+      'currentPop_ages':      self.currentPop_ages,
+      'bestPoint':            self.bestPoint,
+      'bestFitness':          self.bestFitness,
+      'multiBestPoint':       self.multiBestPoint,
+      'multiBestFitness':     self.multiBestFitness,
+      'multiBestObjective':   self.multiBestObjective,
+      'multiBestConstraint':  self.multiBestConstraint,
+      'multiBestRank':        self.multiBestRank,
+      'multiBestCD':          self.multiBestCD,
+      'ahdp':                 self.ahdp,
+      'ahd':                  self.ahd,
+      'hdsm':                 self.hdsm,
+      '_convergenceInfo':     self._convergenceInfo,
+      '_acceptHistory':       self._acceptHistory,
+      '_acceptRerun':         self._acceptRerun,
+    })
+    return state
+
+  def _restoreCheckpointState(self, state):
+    """
+      Restores GA-specific runtime state, then delegates base class state restoration to super().
+      @ In, state, dict, state dict previously produced by _getCheckpointState
+      @ Out, None
+    """
+    RavenSampled._restoreCheckpointState(self, state)
+    self.matingPopInputs     = state['matingPopInputs']
+    self.matingPopObjVals    = state['matingPopObjVals']
+    self.matingPopAges       = state['matingPopAges']
+    self.matingPopFitness    = state['matingPopFitness']
+    self.matingPopRanks      = state['matingPopRanks']
+    self.matingPop_g         = state['matingPop_g']
+    self.matingPopCD         = state['matingPopCD']
+    self.prevPop_inputs      = state['prevPop_inputs']
+    self.currentPop_ages     = state['currentPop_ages']
+    self.bestPoint           = state['bestPoint']
+    self.bestFitness         = state['bestFitness']
+    self.multiBestPoint      = state['multiBestPoint']
+    self.multiBestFitness    = state['multiBestFitness']
+    self.multiBestObjective  = state['multiBestObjective']
+    self.multiBestConstraint = state['multiBestConstraint']
+    self.multiBestRank       = state['multiBestRank']
+    self.multiBestCD         = state['multiBestCD']
+    self.ahdp                = state['ahdp']
+    self.ahd                 = state['ahd']
+    self.hdsm                = state['hdsm']
+    # Trajectory-indexed dicts have int keys serialized as strings by JSON; restore them.
+    self._convergenceInfo    = {int(k): v for k, v in state['_convergenceInfo'].items()}
+    self._acceptHistory      = {int(k): v for k, v in state['_acceptHistory'].items()}
+    self._acceptRerun        = {int(k): v for k, v in state['_acceptRerun'].items()}
+
+  def _validateCheckpoint(self, checkpoint):
+    """
+      Validates GA-specific settings in the checkpoint before restore. Calls super() for base checks.
+      @ In, checkpoint, dict, loaded checkpoint dict
+      @ Out, None
+    """
+    RavenSampled._validateCheckpoint(self, checkpoint)
+    settings = checkpoint.get('settings', {})
+    ckptPopSize = settings.get('populationSize')
+    if ckptPopSize is not None and ckptPopSize != self._populationSize:
+      self.raiseAnError(IOError,
+          f'Restart file population size ({ckptPopSize}) does not match the current population '
+          f'size ({self._populationSize}). Population size cannot change between runs.')
+    ckptIsMulti = settings.get('isMultiObjective')
+    if ckptIsMulti is not None and ckptIsMulti != self._isMultiObjective:
+      ckptMode = 'multi-objective' if ckptIsMulti else 'single-objective'
+      curMode  = 'multi-objective' if self._isMultiObjective else 'single-objective'
+      self.raiseAnError(IOError,
+          f'Restart file was written in {ckptMode} mode but the current configuration is '
+          f'{curMode}. This setting cannot change between runs.')
 
   def _resolveNewGeneration(self, traj, rlz, info, pastPop=None, objectiveVal=None, fitness=None, g=None, ranks=None, CD=None):
     """
