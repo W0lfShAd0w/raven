@@ -120,7 +120,7 @@ class _PRLOCheckerBase():
     # decode location
     locNum = int(np.ceil(((faID + 1) % (solnLen*numBatches)) / numBatches))
     if locNum == 0:
-      locNum = int(np.ceil((faID % (solnLen*numBatches)) / numBatches))
+      locNum = solnLen
     # decode batch number
     batchNum = 1 + int(faID % numBatches)
     # decode FA type
@@ -208,6 +208,15 @@ class EQChecker(_PRLOCheckerBase):
         return False, 4
       elif decodedGenomeWithMult[sourceLoc][0][1] - gene[1] != -1: # does batch number increment by 1 after reload?
         return False, 5
+
+  ## Assert: no fresh WABA assembly is placed at a CR bank location
+    wabaTypes = getattr(self.prloData, 'wabaTypes', set())
+    crBankLocSet = getattr(self.prloData, 'crBankLocSet', set())
+    if wabaTypes and crBankLocSet:
+      for i in range(len(genome)):
+        _, batchNum, typeNum = self.decodeFAID(genome[i], self.prloData.solnLen, self.prloData.numBatches)
+        if batchNum == 1 and typeNum in wabaTypes and (i + 1) in crBankLocSet:
+          return False, 6
 
     return True, 0
 
@@ -310,5 +319,14 @@ class SingleCycleChecker(_PRLOCheckerBase):
         return False, 7
     elif not self.prloData.feedBatchSizeLimits[0] <= freshFuelCount <= self.prloData.feedBatchSizeLimits[1]:
       return False, 8
+
+  ## Assert: no fresh WABA assembly is placed at a CR bank location
+    wabaTypes = getattr(self.prloData, 'wabaTypes', set())
+    crBankLocSet = getattr(self.prloData, 'crBankLocSet', set())
+    if wabaTypes and crBankLocSet:
+      for i, gene in enumerate(genome):
+        _, batchNum, typeNum = self.decodeFAID(int(gene), self.prloData.solnLen, self.prloData.numBatches)
+        if batchNum == 1 and typeNum in wabaTypes and (i + 1) in crBankLocSet:
+          return False, 9
 
     return True, 0
