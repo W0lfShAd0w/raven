@@ -193,4 +193,31 @@
       zero_threshold = 1e-5
     [../]
   [../]
+
+  [./GDWriteCheckpoint]
+    type = 'RavenFramework'
+    input = 'gd_write_checkpoint.xml'
+    [./data]
+      type = OrderedCSV
+      output = 'GDWriteCheckpoint/opt_export_0.csv'
+      rel_err = 1e-3
+      zero_threshold = 1e-5
+    [../]
+    [./checkpoint_exists]
+      type = Exists
+      output = 'GDWriteCheckpoint/opter.ravenrst'
+    [../]
+  [../]
+
+  [./GDRestartFromCheckpoint]
+    type = 'RavenFramework'
+    input = 'gd_restart_from_checkpoint.xml'
+    prereq = GDWriteCheckpoint
+    [./data]
+      type = OrderedCSV
+      output = 'GDRestartFromCheckpoint/opt_export_0.csv'
+      rel_err = 1e-2
+      zero_threshold = 1e-5
+    [../]
+  [../]
 []

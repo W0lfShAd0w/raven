@@ -450,4 +450,46 @@
       rel_err = 0.001
     [../]
   [../]
+
+  [./MinwReplacementWriteCheckpoint]
+    type = 'RavenFramework'
+    input = 'discrete/unconstrained/testGAMinwRepWriteCheckpoint.xml'
+    [./data]
+      type = OrderedCSV
+      output = 'discrete/unconstrained/MinwReplacementWriteCheckpoint/opt_export_0.csv'
+      rel_err = 1e-3
+      zero_threshold = 1e-5
+    [../]
+    [./checkpoint_exists]
+      type = Exists
+      output = 'discrete/unconstrained/MinwReplacementWriteCheckpoint/GAopt.ravenrst'
+    [../]
+  [../]
+
+  [./MinwReplacementCheckpointSplit]
+    type = 'RavenFramework'
+    input = 'discrete/unconstrained/testGAMinwRepCheckpointSplit.xml'
+    [./data]
+      type = OrderedCSV
+      output = 'discrete/unconstrained/MinwReplacementCheckpointSplit/opt_export_0.csv'
+      rel_err = 1e-3
+      zero_threshold = 1e-5
+    [../]
+    [./checkpoint_exists]
+      type = Exists
+      output = 'discrete/unconstrained/MinwReplacementCheckpointSplit/GAopt.ravenrst'
+    [../]
+  [../]
+
+  [./MinwReplacementRestartFromCheckpoint]
+    type = 'RavenFramework'
+    input = 'discrete/unconstrained/testGAMinwRepRestartFromCheckpoint.xml'
+    prereq = MinwReplacementCheckpointSplit
+    [./data]
+      type = OrderedCSV
+      output = 'discrete/unconstrained/MinwReplacementRestart/opt_export_0.csv'
+      rel_err = 1e-3
+      zero_threshold = 1e-5
+    [../]
+  [../]
 []

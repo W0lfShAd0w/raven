@@ -65,6 +65,16 @@
     type = 'RavenPython'
     input = 'testRankSelection.py'
   [../]
-  
+
+  # Checkpoint/Restart Unit Tests
+  [./testCheckpointCodec]
+    type = 'RavenPython'
+    input = 'testCheckpointCodec.py'
+  [../]
+
+  [./testCheckpointValidate]
+    type = 'RavenPython'
+    input = 'testCheckpointValidate.py'
+  [../]
 
 []
