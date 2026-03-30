@@ -119,4 +119,31 @@
       zero_threshold = 1e-5
     [../]
   [../]
+
+  [./SAWriteCheckpoint]
+    type = 'RavenFramework'
+    input = 'sa_write_checkpoint.xml'
+    [./data]
+      type = OrderedCSV
+      output = 'SAWriteCheckpoint/opt_export_0.csv'
+      rel_err = 1e-3
+      zero_threshold = 1e-5
+    [../]
+    [./checkpoint_exists]
+      type = Exists
+      output = 'SAWriteCheckpoint/simOpt.ravenrst'
+    [../]
+  [../]
+
+  [./SARestartFromCheckpoint]
+    type = 'RavenFramework'
+    input = 'sa_restart_from_checkpoint.xml'
+    prereq = SAWriteCheckpoint
+    [./data]
+      type = OrderedCSV
+      output = 'SARestartFromCheckpoint/opt_export_0.csv'
+      rel_err = 1e-3
+      zero_threshold = 1e-5
+    [../]
+  [../]
 []

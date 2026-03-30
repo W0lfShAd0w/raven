@@ -216,7 +216,7 @@
     [./data]
       type = OrderedCSV
       output = 'GDRestartFromCheckpoint/opt_export_0.csv'
-      rel_err = 1e-2
+      rel_err = 1e-3
       zero_threshold = 1e-5
     [../]
   [../]

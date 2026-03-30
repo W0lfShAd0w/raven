@@ -42,4 +42,31 @@
       zero_threshold = 1e-2
     [../]
   [../]
+
+  [./BayesianWriteCheckpoint]
+    type = 'RavenFramework'
+    input = 'bayesian_write_checkpoint.xml'
+    [./data]
+      type = OrderedCSV
+      output = 'BayesianWriteCheckpoint/opt_export_0.csv'
+      rel_err = 1e-3
+      zero_threshold = 1e-5
+    [../]
+    [./checkpoint_exists]
+      type = Exists
+      output = 'BayesianWriteCheckpoint/opter.ravenrst'
+    [../]
+  [../]
+
+  [./BayesianRestartFromCheckpoint]
+    type = 'RavenFramework'
+    input = 'bayesian_restart_from_checkpoint.xml'
+    prereq = BayesianWriteCheckpoint
+    [./data]
+      type = OrderedCSV
+      output = 'BayesianRestartFromCheckpoint/opt_export_0.csv'
+      rel_err = 1e-3
+      zero_threshold = 1e-5
+    [../]
+  [../]
 []

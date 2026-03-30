@@ -209,11 +209,13 @@ class BayesianOptimizer(RavenSampled):
     """
     # FIXME currently BO assumes only one optimization 'trajectory'
     RavenSampled.initialize(self, externalSeeding=externalSeeding, solutionExport=solutionExport)
-    self._convergenceInfo = {0:{'persistence':0, 'converged':False}}
     meta = ['batchId']
     self.addMetaKeys(meta)
     self._initialSampleSize = len(self._initialValues)
-    self.batch = self._initialSampleSize
+    # On checkpoint restore, _convergenceInfo, batch, and training data are already populated.
+    if not self._checkpointRestored:
+      self._convergenceInfo = {0:{'persistence':0, 'converged':False}}
+      self.batch = self._initialSampleSize
 
     # Building explicit contraints for acquisition if there are any
     if len(self._constraintFunctions) > 0:
@@ -253,41 +255,43 @@ class BayesianOptimizer(RavenSampled):
     for t in self._activeTraj[1:]:
       self._closeTrajectory(t, 'cancel', 'Currently BO is single trajectory', 0)
 
-    # Initialize feature and target data set for conditioning regression model on
-    # NOTE assuming that sampler/user provides at least one initial input
-    # FIXME do we want to keep storage of features and targets, when targetEvaluation has this info?
-    init = self._initialValues[0]
+    # Initialize feature and target data set for conditioning regression model on.
+    # On checkpoint restore, training data and iteration counter are already populated; skip setup.
+    if not self._checkpointRestored:
+      # NOTE assuming that sampler/user provides at least one initial input
+      # FIXME do we want to keep storage of features and targets, when targetEvaluation has this info?
+      init = self._initialValues[0]
 
-    # NOTE If the ROM has been already trained, use the existing training data from ROM to update
-    # trainingInputs and trainingTargets
-    if self._model.amITrained:
-      trainingData = self._model.trainingSet
-      trainingData = self.normalizeData(trainingData)
-      for varName in self.toBeSampled.keys():
-        self._trainingInputs[0][varName] = list(trainingData[varName])
-      self._trainingTargets.append(list(trainingData[self._objectiveVar[0]]))
-      self.raiseAMessage(f"{self._model.name} ROM has been already trained with {len(trainingData[self._objectiveVar[0]])} samples!",
-                         "This pre-trained ROM will be used by Optimizer to evaluate the next best point!")
-      # retrieving the best solution is based on the acqusition function's utility
-      # Constraints are considered in the following method.
-      xStar, minDex = self._acquFunction._recommendSolutionForPretrainedRom(self)
-      # remove the best solution from training data
-      for varName in self.toBeSampled.keys():
-        self._trainingInputs[0][varName].pop(minDex)
-      self._trainingTargets[0].pop(minDex)
-      # re-evaluate the best point with the given model
-      self._iteration[0] = 0
-      self._submitRun(xStar, 0, 0)
-    else:
-      self._trainingTargets.append([])
-      for varName, _ in init.items():
-        self._trainingInputs[0][varName] = []
+      # NOTE If the ROM has been already trained, use the existing training data from ROM to update
+      # trainingInputs and trainingTargets
+      if self._model.amITrained:
+        trainingData = self._model.trainingSet
+        trainingData = self.normalizeData(trainingData)
+        for varName in self.toBeSampled.keys():
+          self._trainingInputs[0][varName] = list(trainingData[varName])
+        self._trainingTargets.append(list(trainingData[self._objectiveVar[0]]))
+        self.raiseAMessage(f"{self._model.name} ROM has been already trained with {len(trainingData[self._objectiveVar[0]])} samples!",
+                           "This pre-trained ROM will be used by Optimizer to evaluate the next best point!")
+        # retrieving the best solution is based on the acqusition function's utility
+        # Constraints are considered in the following method.
+        xStar, minDex = self._acquFunction._recommendSolutionForPretrainedRom(self)
+        # remove the best solution from training data
+        for varName in self.toBeSampled.keys():
+          self._trainingInputs[0][varName].pop(minDex)
+        self._trainingTargets[0].pop(minDex)
+        # re-evaluate the best point with the given model
+        self._iteration[0] = 0
+        self._submitRun(xStar, 0, 0)
+      else:
+        self._trainingTargets.append([])
+        for varName, _ in init.items():
+          self._trainingInputs[0][varName] = []
 
-    # First step is to sample the model at all initial points from the init sampler
-    for _, point in enumerate(self._initialValues):
-      self._iteration[0] = 0
-      # Submitting each initial sample point to the sampler
-      self._submitRun(point, 0, 0)
+      # First step is to sample the model at all initial points from the init sampler
+      for _, point in enumerate(self._initialValues):
+        self._iteration[0] = 0
+        # Submitting each initial sample point to the sampler
+        self._submitRun(point, 0, 0)
 
   def _submitRun(self, point, traj, step, moreInfo=None):
     """
@@ -778,3 +782,47 @@ class BayesianOptimizer(RavenSampled):
       Abstract method from RavenSampled, currently not used by BayesianOptimizer
     """
     self.raiseAnError(NotImplementedError, '_rejectOptPoint not implemented for Bayesian Optimizer')
+
+  ###########################
+  # Checkpoint / Restart    #
+  ###########################
+
+  def _getCheckpointState(self):
+    """
+      Returns BayesianOptimizer-specific runtime state merged with the base class state.
+      Training inputs/targets are saved so the GPR can be retrained on restart without re-running
+      the initial sample evaluations.
+      @ In, None
+      @ Out, state, dict, serializable optimizer runtime state
+    """
+    state = RavenSampled._getCheckpointState(self)
+    state.update({
+      '_iteration':        self._iteration,
+      '_convergenceInfo':  self._convergenceInfo,
+      '_trainingInputs':   self._trainingInputs,
+      '_trainingTargets':  self._trainingTargets,
+      '_evaluationCount':  self._evaluationCount,
+      '_expectedOptVal':   self._expectedOptVal,
+      '_optValSigma':      self._optValSigma,
+      '_expectedSolution': self._expectedSolution,
+    })
+    return state
+
+  def _restoreCheckpointState(self, state):
+    """
+      Restores BayesianOptimizer-specific runtime state, then delegates base class restoration to
+      super().  After restore the GPR will be retrained on the first call to _useRealization using
+      the recovered training data.
+      @ In, state, dict, state dict previously produced by _getCheckpointState
+      @ Out, None
+    """
+    RavenSampled._restoreCheckpointState(self, state)
+    # Trajectory-indexed dicts have int keys serialized as strings by JSON; restore them.
+    self._iteration        = {int(k): v for k, v in state['_iteration'].items()}
+    self._convergenceInfo  = {int(k): v for k, v in state['_convergenceInfo'].items()}
+    self._trainingInputs   = state['_trainingInputs']
+    self._trainingTargets  = state['_trainingTargets']
+    self._evaluationCount  = state['_evaluationCount']
+    self._expectedOptVal   = state['_expectedOptVal']
+    self._optValSigma      = state['_optValSigma']
+    self._expectedSolution = state['_expectedSolution']

@@ -294,11 +294,12 @@ class GradientDescent(RavenSampled):
     if len(self._initialValues) < 2:
       self.raiseADebug('Setting terminateFollowers to False since only 1 trajectory exists.')
       self._terminateFollowers = False
-    # queue up the first run for each trajectory
-    initialStepSize = self._stepInstance.initialStepSize(len(self.toBeSampled)) # TODO user scaling option
-    for traj, init in enumerate(self._initialValues):
-      self._stepHistory[traj].append({'magnitude': initialStepSize, 'versor': None, 'info': None})
-      self._submitOptAndGrads(init, traj, 0, initialStepSize)
+    # queue up the first run for each trajectory (skip on checkpoint restore; queue is already populated)
+    if not self._checkpointRestored:
+      initialStepSize = self._stepInstance.initialStepSize(len(self.toBeSampled)) # TODO user scaling option
+      for traj, init in enumerate(self._initialValues):
+        self._stepHistory[traj].append({'magnitude': initialStepSize, 'versor': None, 'info': None})
+        self._submitOptAndGrads(init, traj, 0, initialStepSize)
 
 
   ###############
@@ -850,6 +851,74 @@ class GradientDescent(RavenSampled):
       scale *= upper - lower
 
     return gradMag / scale
+
+  ###########################
+  # Checkpoint / Restart    #
+  ###########################
+
+  def _getCheckpointSettings(self):
+    """
+      Returns GradientDescent-specific configuration settings for restart validation, merged with
+      the base class settings.
+      @ In, None
+      @ Out, settings, dict, configuration settings required for restart compatibility checks
+    """
+    settings = RavenSampled._getCheckpointSettings(self)
+    settings['convergenceCriteria'] = sorted(self._convergenceCriteria.keys())
+    return settings
+
+  def _getCheckpointState(self):
+    """
+      Returns GradientDescent-specific runtime state merged with the base class state.
+      @ In, None
+      @ Out, state, dict, serializable optimizer runtime state
+    """
+    state = RavenSampled._getCheckpointState(self)
+    state.update({
+      '_gradHistory':         self._gradHistory,
+      '_stepHistory':         self._stepHistory,
+      '_acceptHistory':       self._acceptHistory,
+      '_stepRecommendations': self._stepRecommendations,
+      '_acceptRerun':         self._acceptRerun,
+      '_convergenceInfo':     self._convergenceInfo,
+      '_trajectoryFollowers': dict(self._trajectoryFollowers),
+    })
+    return state
+
+  def _restoreCheckpointState(self, state):
+    """
+      Restores GradientDescent-specific runtime state, then delegates base class restoration to
+      super().
+      @ In, state, dict, state dict previously produced by _getCheckpointState
+      @ Out, None
+    """
+    RavenSampled._restoreCheckpointState(self, state)
+    # Trajectory-indexed dicts have int keys serialized as strings by JSON; restore them.
+    self._gradHistory         = {int(k): v for k, v in state['_gradHistory'].items()}
+    self._stepHistory         = {int(k): v for k, v in state['_stepHistory'].items()}
+    self._acceptHistory       = {int(k): v for k, v in state['_acceptHistory'].items()}
+    self._stepRecommendations = {int(k): v for k, v in state['_stepRecommendations'].items()}
+    self._acceptRerun         = {int(k): v for k, v in state['_acceptRerun'].items()}
+    self._convergenceInfo     = {int(k): v for k, v in state['_convergenceInfo'].items()}
+    self._trajectoryFollowers = defaultdict(list,
+                                  {int(k): v for k, v in state['_trajectoryFollowers'].items()})
+
+  def _validateCheckpoint(self, checkpoint):
+    """
+      Validates GradientDescent-specific settings in the checkpoint before restore.  Calls super()
+      for base checks.
+      @ In, checkpoint, dict, loaded checkpoint dict
+      @ Out, None
+    """
+    RavenSampled._validateCheckpoint(self, checkpoint)
+    settings = checkpoint.get('settings', {})
+    ckptCriteria = settings.get('convergenceCriteria')
+    if ckptCriteria is not None:
+      currentCriteria = sorted(self._convergenceCriteria.keys())
+      if ckptCriteria != currentCriteria:
+        self.raiseAnError(IOError,
+            f'Restart file convergence criteria {ckptCriteria} do not match the current '
+            f'criteria {currentCriteria}. Convergence criteria cannot change between runs.')
 
   def _formatSolutionExportVariableNames(self, acceptable):
     """

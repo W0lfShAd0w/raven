@@ -267,8 +267,9 @@ class SimulatedAnnealing(RavenSampled):
           values[var] =  init[var]
       values = self.normalizeData(values)
 
-      # queue up the first run for each trajectory
-      self._submitRun(values,traj,self.getIteration(traj))
+      # queue up the first run for each trajectory (skip on checkpoint restore; queue is already populated)
+      if not self._checkpointRestored:
+        self._submitRun(values,traj,self.getIteration(traj))
 
 
   def initializeTrajectory(self, traj=None):
@@ -764,6 +765,65 @@ class SimulatedAnnealing(RavenSampled):
     point, modded = self._handleExplicitConstraints(new, suggested, 'opt')
 
     return point, modded
+
+  ###########################
+  # Checkpoint / Restart    #
+  ###########################
+
+  def _getCheckpointSettings(self):
+    """
+      Returns SimulatedAnnealing-specific configuration settings for restart validation, merged
+      with the base class settings.
+      @ In, None
+      @ Out, settings, dict, configuration settings required for restart compatibility checks
+    """
+    settings = RavenSampled._getCheckpointSettings(self)
+    settings['coolingMethod'] = self._coolingMethod
+    return settings
+
+  def _getCheckpointState(self):
+    """
+      Returns SimulatedAnnealing-specific runtime state merged with the base class state.
+      @ In, None
+      @ Out, state, dict, serializable optimizer runtime state
+    """
+    state = RavenSampled._getCheckpointState(self)
+    state.update({
+      '_acceptHistory':   self._acceptHistory,
+      '_acceptRerun':     self._acceptRerun,
+      '_convergenceInfo': self._convergenceInfo,
+      'T':                self.T,
+    })
+    return state
+
+  def _restoreCheckpointState(self, state):
+    """
+      Restores SimulatedAnnealing-specific runtime state, then delegates base class restoration to
+      super().
+      @ In, state, dict, state dict previously produced by _getCheckpointState
+      @ Out, None
+    """
+    RavenSampled._restoreCheckpointState(self, state)
+    # Trajectory-indexed dicts have int keys serialized as strings by JSON; restore them.
+    self._acceptHistory   = {int(k): v for k, v in state['_acceptHistory'].items()}
+    self._acceptRerun     = {int(k): v for k, v in state['_acceptRerun'].items()}
+    self._convergenceInfo = {int(k): v for k, v in state['_convergenceInfo'].items()}
+    self.T                = state['T']
+
+  def _validateCheckpoint(self, checkpoint):
+    """
+      Validates SimulatedAnnealing-specific settings in the checkpoint before restore.  Calls
+      super() for base checks.
+      @ In, checkpoint, dict, loaded checkpoint dict
+      @ Out, None
+    """
+    RavenSampled._validateCheckpoint(self, checkpoint)
+    settings = checkpoint.get('settings', {})
+    ckptCooling = settings.get('coolingMethod')
+    if ckptCooling is not None and ckptCooling != self._coolingMethod:
+      self.raiseAnError(IOError,
+          f'Restart file used cooling method "{ckptCooling}" but the current configuration uses '
+          f'"{self._coolingMethod}". The cooling method cannot change between runs.')
 
   ##############
   # Destructor #
