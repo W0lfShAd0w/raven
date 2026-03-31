@@ -253,6 +253,7 @@ import numpy as np
 from copy import deepcopy
 from scipy.special import comb
 import xarray as xr
+from copy import deepcopy
 # External Modules End------------------------------------------------------------------------------
 
 # Internal Modules----------------------------------------------------------------------------------
@@ -317,13 +318,13 @@ class GeneticAlgorithm(RavenSampled):
     self.batchId = 0
     self.prevPop_inputs = None
     self.currentPop_ages = None
-    self.matingPop_inputs = None                                 # panda Dataset container containing the population at the beginning of each generation iteration
-    self.matingPop_objvals = None                                # objective values of solutions
-    self.matingPop_ages = None                                   # population age
-    self.matingPop_fitness = None                                # population fitness
-    self.matingPop_ranks = None                                  # population rank (for Multi-objective optimization only)
+    self.matingPopInputs = None                                 # panda Dataset container containing the population at the beginning of each generation iteration
+    self.matingPopObjVals = None                                # objective values of solutions
+    self.matingPopAges = None                                   # population age
+    self.matingPopFitness = None                                # population fitness
+    self.matingPopRanks = None                                  # population rank (for Multi-objective optimization only)
     self.matingPop_g = None                                      # calculated contraints value
-    self.matingPop_CD = None                                     # population crowding distance (for Multi-objective optimization only)
+    self.matingPopCD = None                                     # population crowding distance (for Multi-objective optimization only)
     self.ahdp = np.NaN                                           # p-Average Hausdorff Distance between populations
     self.ahd  = np.NaN                                           # Hausdorff Distance between populations
     self.hdsm = np.NaN                                           # Hausdorff Distance Similarity metric between populations
@@ -359,7 +360,6 @@ class GeneticAlgorithm(RavenSampled):
     self._repairInstance = None                                  # instance of repair
     self._canHandleMultiObjective = True                         # boolean indicator whether optimization is a sinlge-objective problem or a multi-objective problem
     self._sampledPopulationInfo = {}                             # stores population and fitness info
-
   ##########################
   # Initialization Methods #
   ##########################
@@ -392,7 +392,7 @@ class GeneticAlgorithm(RavenSampled):
                             individual solutions, introducing diversity into the population and enabling exploration of new regions in the solution space.
                             Crossover, on the other hand, mimics genetic recombination by exchanging genetic material between two parent solutions to create
                             offspring with combined traits. Survivor selection determines which solutions will advance to the next generation based on
-                            their fitness—how well they perform in solving the problem at hand. Solutions with higher fitness scores are more likely to
+                            their fitness-how well they perform in solving the problem at hand. Solutions with higher fitness scores are more likely to
                             survive and reproduce, passing their genetic material to subsequent generations. This iterative process continues
                             until a stopping criterion is met, typically when a satisfactory solution is found or after a predetermined number of generations.
                             More information can be found in:\\\\
@@ -491,7 +491,7 @@ class GeneticAlgorithm(RavenSampled):
                   \item \textit{randomMutator} - It randomly selects a gene within an chromosome and mutates the gene.
                 \end{itemize} """)
     mutation.addParam("type",
-                      InputTypes.makeEnumType('mutation','mutationType',['swapMutator','scrambleMutator','inversionMutator','randomMutator','swapMutatorEQ']),
+                      InputTypes.makeEnumType('mutation','mutationType',['swapMutator','scrambleMutator','inversionMutator','randomMutator','swapMutatorSS']),
                       True,
                       descr="type of mutation operation to be used. See the list of options above.")
     mutationLocs = InputData.parameterInputFactory('locs', strictMode=True,
@@ -572,6 +572,7 @@ class GeneticAlgorithm(RavenSampled):
         descr=r""" normalize: input and output data will be normalized prior to calculating fitness for each iteration of the optimizer. \default{zscore}""")
     fitness.addSub(normalizeFitness)
     GAparams.addSub(fitness)
+
     specs.addSub(GAparams)
 
     # convergence
@@ -767,6 +768,10 @@ class GeneticAlgorithm(RavenSampled):
     meta = ['batchId']
     self.addMetaKeys(meta)
     self.batch = self._populationSize
+    if self._checkpointRestored:
+      # Submission queue already populated from checkpoint state; skip initial population submission.
+      self.raiseAMessage('Resuming from checkpoint; skipping initial population submission.')
+      return
     if self._populationSize != len(self._initialValues):
       self.raiseAnError(IOError, f'Number of initial values provided for each variable is {len(self._initialValues)}, while the population size is {self._populationSize}')
     for _, init in enumerate(self._initialValues):
@@ -815,22 +820,14 @@ class GeneticAlgorithm(RavenSampled):
       self._closeTrajectory(t, 'cancel', 'Currently GA is single trajectory', 0)
     self.incrementIteration(traj)
 
-    files = self.assemblerDict['Files']
-    ## add checker/here
-    EQflag = any("EQinput" in sublist for sublist in files)
-    if EQflag:
-      self._EQcheckfile = files
-    else:
-      self._EQcheckfile = None
 
-    currentPop_inputs = datasetToDataArray(rlz, list(self.toBeSampled))
-
+    currentPopInputs = datasetToDataArray(rlz, list(self.toBeSampled))
     currentPop_objvals = []
     for i in range(len(self._objectiveVar)):
       currentPop_objvals.append(list(np.atleast_1d(rlz[self._objectiveVar[i]].data)))
 
   ## 1. Check constraint violations and calculate the constraint function g (<0 if the constraint is violated)
-    currentPop_g = constraintHandling(self, info, rlz, currentPop_inputs, currentPop_objvals, multiObjective=self._isMultiObjective)
+    currentPop_g = constraintHandling(self, info, rlz, currentPopInputs, currentPop_objvals, multiObjective=self._isMultiObjective)
 
   ## 2. Normalize values for fitness function evaluation, if requested.
     norm_rlz = deepcopy(rlz)
@@ -861,8 +858,8 @@ class GeneticAlgorithm(RavenSampled):
           if np.isnan(currentPop_g[i][j]):
             currentPop_g[i][j] = 0.0
 
-  ## 3. Compute fitness for the offspring
-    currentPop_fitness = self._fitnessInstance(norm_rlz,
+  ## 3. Compute fitness for the current population
+    currentPopFitness = self._fitnessInstance(norm_rlz,
                                                objVar=self._objectiveVar,
                                                a=self._objCoeff,
                                                b=self._penaltyCoeff,
@@ -871,96 +868,105 @@ class GeneticAlgorithm(RavenSampled):
                                                constraintNum=self._numOfConst,
                                                type=self._minMax)
 
+
+  ## # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # ##
+  ## Begin reproduction methods. From this point, current population is now  ##
+  ## considered the "parents" generation.                                    ##
+  ## # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # ##
+
     if self._activeTraj:
   ## 4. Survivor selection
       if not self._isMultiObjective:
         survivorSelectionProcess.singleObjSurvivorSelect(self, info, rlz, traj,
-                                                         currentPop_inputs,
-                                                         currentPop_fitness,
+                                                         currentPopInputs,
+                                                         currentPopFitness,
                                                          currentPop_objvals,
                                                          currentPop_g)
       else:
         survivorSelectionProcess.multiObjSurvivorSelect(self, info, rlz, traj,
-                                                        currentPop_inputs,
-                                                        currentPop_fitness,
+                                                        currentPopInputs,
+                                                        currentPopFitness,
                                                         currentPop_objvals,
                                                         currentPop_g)
       # update the age estimate for the current population for printing later
-      self.currentPop_ages = np.zeros(len(currentPop_inputs), dtype=int)
+      self.currentPop_ages = np.zeros(len(currentPopInputs), dtype=int)
       if self.counter > 1:
         for i in range(len(self.currentPop_ages)):
-          indv = currentPop_inputs[i]
-          for indx, val in enumerate(self.matingPop_inputs):
+          indv = currentPopInputs[i]
+          for indx, val in enumerate(self.matingPopInputs):
             if val.equals(indv):
-              self.currentPop_ages[i] = self.matingPop_ages[indx]
+              self.currentPop_ages[i] = self.matingPopAges[indx]
               break
 
-      currentPop_ranks = []; currentPop_CD = [] #local vars that is only used in multi-objective but must be initialized regardless
+      # initialize multi-objective containers
+      currentPopRanks = []; currentPopCD = [] #!TODO: it would be better to simply call _parentSelectionInstance two different ways than require these values be initialized.
   ## Single-objective post-processing
       if not self._isMultiObjective:
-          self._collectOptPoint(rlz, currentPop_fitness, currentPop_objvals[0], currentPop_g)
-          self._resolveNewGeneration(traj, rlz, info, self.prevPop_inputs, currentPop_objvals[0], currentPop_fitness, currentPop_g)
+          self._collectOptPoint(rlz, currentPopFitness, currentPop_objvals[0], currentPop_g)
+          self._resolveNewGeneration(traj, rlz, info, self.prevPop_inputs, currentPop_objvals[0], currentPopFitness, currentPop_g)
   ## Multi-objective post-processing
       else:
         # list for Rank and CD calculation
-        currentPop_fitsbysoln = datasetToDataArray(currentPop_fitness, self._objectiveVar).data.tolist()
+        currentPop_fitsbysoln = datasetToDataArray(currentPopFitness, self._objectiveVar).data.tolist()
     ## 5. Compute the rank of current population
-        currentPop_ranks = frontUtils.rankNonDominatedFrontiers(np.array(currentPop_fitsbysoln), isFitness=True)
-        currentPop_ranks = xr.DataArray(currentPop_ranks,
+        currentPopRanks = frontUtils.rankNonDominatedFrontiers(np.array(currentPop_fitsbysoln), isFitness=True)
+        currentPopRanks = xr.DataArray(currentPopRanks,
                                       dims=['rank'],
-                                      coords={'rank': np.arange(np.shape(currentPop_ranks)[0])})
+                                      coords={'rank': np.arange(np.shape(currentPopRanks)[0])})
     ## 6. Compute the crowding distance of current population
-        currentPop_CD = frontUtils.crowdingDistance(rank=currentPop_ranks,
-                                                            popSize=len(currentPop_ranks),
+        currentPopCD = frontUtils.crowdingDistance(rank=currentPopRanks,
+                                                            popSize=len(currentPopRanks),
                                                             fitness=np.array(currentPop_fitsbysoln))
-        currentPop_CD = xr.DataArray(currentPop_CD,
+        currentPopCD = xr.DataArray(currentPopCD,
                                               dims=['CrowdingDistance'],
-                                              coords={'CrowdingDistance': np.arange(np.shape(currentPop_CD)[0])})
+                                              coords={'CrowdingDistance': np.arange(np.shape(currentPopCD)[0])})
 
         self._collectOptPointMulti(rlz,
-                                   currentPop_inputs,
-                                   currentPop_ranks,
-                                   currentPop_CD,
+                                   currentPopInputs,
+                                   currentPopRanks,
+                                   currentPopCD,
                                    currentPop_objvals,
-                                   currentPop_fitness,
+                                   currentPopFitness,
                                    currentPop_g)
-        self._resolveNewGeneration(traj, rlz, info, self.prevPop_inputs, currentPop_objvals, currentPop_fitness, currentPop_g, currentPop_ranks, currentPop_CD)
+        self._resolveNewGeneration(traj, rlz, info, self.prevPop_inputs, currentPop_objvals, currentPopFitness, currentPop_g, currentPopRanks, currentPopCD)
 
   ## 7. Parent selection from population
       if self.counter > 1:
-        parents = self._parentSelectionInstance(self.matingPop_inputs,
+        parents = self._parentSelectionInstance(self.matingPopInputs,
                                                 variables=list(self.toBeSampled),
-                                                fitness=self.matingPop_fitness,
+                                                fitness=self.matingPopFitness,
                                                 kSelection=self._kSelection,
                                                 nParents=self._nParents,
-                                                rank=self.matingPop_ranks,
-                                                crowdDistance=self.matingPop_CD,
+                                                rank=self.matingPopRanks,
+                                                crowdDistance=self.matingPopCD,
                                                 objVar=self._objectiveVar,
                                                 isMultiObjective = self._isMultiObjective)
-      else: # first generation
-        parents = self._parentSelectionInstance(currentPop_inputs,
+      else: # first generation #!TODO: split this into a separate call for single/multi.
+        parents = self._parentSelectionInstance(currentPopInputs,
                                                 variables=list(self.toBeSampled),
-                                                fitness=currentPop_fitness,
+                                                fitness=currentPopFitness,
                                                 kSelection=self._kSelection,
                                                 nParents=self._nParents,
-                                                rank=currentPop_ranks,
-                                                crowdDistance=currentPop_CD,
+                                                rank=currentPopRanks,
+                                                crowdDistance=currentPopCD,
                                                 objVar=self._objectiveVar,
                                                 isMultiObjective = self._isMultiObjective)
 
   ## 8. Reproduction
-	  ### Modified with EQ cycle
+    ### Modified with EQ cycle
       # 8.1 Crossover
       childrenXover = self._crossoverInstance(parents=parents,
                                               variables=list(self.toBeSampled),
                                               crossoverProb=self._crossoverProb,
-                                              points=self._crossoverPoints, EQfiles = self._EQcheckfile)
+                                              points=self._crossoverPoints,
+                                              files = self.assemblerDict['Files'])
       # 8.2 Mutation
       childrenMutated = self._mutationInstance(offSprings=childrenXover,
                                                distDict=self.distDict,
                                                locs=self._mutationLocs,
                                                mutationProb=self._mutationProb,
-                                               variables=list(self.toBeSampled), EQfiles = self._EQcheckfile)
+                                               variables=list(self.toBeSampled),
+                                               files = self.assemblerDict['Files'])
 
   ## 9. repair/replacement
       # Repair should only happen if multiple genes in a single chromosome have the same values (),
@@ -986,15 +992,22 @@ class GeneticAlgorithm(RavenSampled):
                                         'Gene':list(self.toBeSampled)})
 
   ## 10. Submit children batch
+      # First, build a list of all children as dicts
+      childrenToSubmit = []
+
       # Submit children coordinates (x1,...,xm), i.e., self.childrenCoordinates
       for i in range(self.batch):
         newRlz = {}
         for _, var in enumerate(self.toBeSampled.keys()):
           newRlz[var] = float(daChildren.loc[i, var].values)
-        self._submitRun(newRlz, traj, self.getIteration(traj))
+
+        childrenToSubmit.append(newRlz)
+
+      for child in childrenToSubmit:
+        self._submitRun(child, traj, self.getIteration(traj))
 
   ## 11. Save grandparents
-    self.prevPop_inputs = deepcopy(currentPop_inputs)
+    self.prevPop_inputs = deepcopy(currentPopInputs)
 
   def _submitRun(self, point, traj, step, moreInfo=None):
     """
@@ -1003,7 +1016,7 @@ class GeneticAlgorithm(RavenSampled):
       @ In, traj, int, trajectory identifier
       @ In, step, int, iteration number identifier
       @ In, moreInfo, dict, optional, additional run-identifying information to track
-      @ Out, None
+      @ Out, queued, bool, True if the run was queued
     """
     info = {}
     if moreInfo is not None:
@@ -1011,10 +1024,8 @@ class GeneticAlgorithm(RavenSampled):
     info.update({'traj': traj,
                   'step': step
                 })
-    # NOTE: Currently, GA treats explicit and implicit constraints similarly
-    # while box constraints (Boundary constraints) are automatically handled via limits of the distribution
-    self.raiseADebug(f'Adding run to queue: {self.denormalizeData(point)} | {info}')
-    self._submissionQueue.append((point, info))
+    # Keep dedup logic centralized in RavenSampled._queueSubmission.
+    return self._queueSubmission(point, info)
 
   def flush(self):
     """
@@ -1023,12 +1034,12 @@ class GeneticAlgorithm(RavenSampled):
       @ Out, None
     """
     super().flush()
-    self.matingPop_inputs = None
-    self.matingPop_objvals = None
-    self.matingPop_ages = None
-    self.matingPop_fitness = None
-    self.matingPop_ranks = None
-    self.matingPop_CD = None
+    self.matingPopInputs = None
+    self.matingPopObjVals = None
+    self.matingPopAges = None
+    self.matingPopFitness = None
+    self.matingPopRanks = None
+    self.matingPopCD = None
     self.ahdp = np.NaN
     self.ahd = np.NaN
     self.hdsm = np.NaN
@@ -1044,7 +1055,109 @@ class GeneticAlgorithm(RavenSampled):
   # END queuing Runs
   # * * * * * * * * * * * * * * * *
 
-  def _resolveNewGeneration(self, traj, rlz, info, past_pop=None, objectiveVal=None, fitness=None, g=None, ranks=None, CD=None):
+  ###########################
+  # Checkpoint / Restart    #
+  ###########################
+
+  def _getCheckpointSettings(self):
+    """
+      Returns GA-specific configuration settings for restart validation, merged with the base class settings.
+      @ In, None
+      @ Out, settings, dict, configuration settings required for restart compatibility checks
+    """
+    settings = RavenSampled._getCheckpointSettings(self)
+    settings['populationSize']   = self._populationSize
+    settings['isMultiObjective'] = self._isMultiObjective
+    return settings
+
+  def _getCheckpointState(self):
+    """
+      Returns GA-specific runtime state merged with the base class state.
+      @ In, None
+      @ Out, state, dict, serializable optimizer runtime state
+    """
+    state = RavenSampled._getCheckpointState(self)
+    state.update({
+      'matingPopInputs':      self.matingPopInputs,
+      'matingPopObjVals':     self.matingPopObjVals,
+      'matingPopAges':        self.matingPopAges,
+      'matingPopFitness':     self.matingPopFitness,
+      'matingPopRanks':       self.matingPopRanks,
+      'matingPop_g':          self.matingPop_g,
+      'matingPopCD':          self.matingPopCD,
+      'prevPop_inputs':       self.prevPop_inputs,
+      'currentPop_ages':      self.currentPop_ages,
+      'bestPoint':            self.bestPoint,
+      'bestFitness':          self.bestFitness,
+      'multiBestPoint':       self.multiBestPoint,
+      'multiBestFitness':     self.multiBestFitness,
+      'multiBestObjective':   self.multiBestObjective,
+      'multiBestConstraint':  self.multiBestConstraint,
+      'multiBestRank':        self.multiBestRank,
+      'multiBestCD':          self.multiBestCD,
+      'ahdp':                 self.ahdp,
+      'ahd':                  self.ahd,
+      'hdsm':                 self.hdsm,
+      '_convergenceInfo':     self._convergenceInfo,
+      '_acceptHistory':       self._acceptHistory,
+      '_acceptRerun':         self._acceptRerun,
+    })
+    return state
+
+  def _restoreCheckpointState(self, state):
+    """
+      Restores GA-specific runtime state, then delegates base class state restoration to super().
+      @ In, state, dict, state dict previously produced by _getCheckpointState
+      @ Out, None
+    """
+    RavenSampled._restoreCheckpointState(self, state)
+    self.matingPopInputs     = state['matingPopInputs']
+    self.matingPopObjVals    = state['matingPopObjVals']
+    self.matingPopAges       = state['matingPopAges']
+    self.matingPopFitness    = state['matingPopFitness']
+    self.matingPopRanks      = state['matingPopRanks']
+    self.matingPop_g         = state['matingPop_g']
+    self.matingPopCD         = state['matingPopCD']
+    self.prevPop_inputs      = state['prevPop_inputs']
+    self.currentPop_ages     = state['currentPop_ages']
+    self.bestPoint           = state['bestPoint']
+    self.bestFitness         = state['bestFitness']
+    self.multiBestPoint      = state['multiBestPoint']
+    self.multiBestFitness    = state['multiBestFitness']
+    self.multiBestObjective  = state['multiBestObjective']
+    self.multiBestConstraint = state['multiBestConstraint']
+    self.multiBestRank       = state['multiBestRank']
+    self.multiBestCD         = state['multiBestCD']
+    self.ahdp                = state['ahdp']
+    self.ahd                 = state['ahd']
+    self.hdsm                = state['hdsm']
+    # Trajectory-indexed dicts have int keys serialized as strings by JSON; restore them.
+    self._convergenceInfo    = {int(k): v for k, v in state['_convergenceInfo'].items()}
+    self._acceptHistory      = {int(k): v for k, v in state['_acceptHistory'].items()}
+    self._acceptRerun        = {int(k): v for k, v in state['_acceptRerun'].items()}
+
+  def _validateCheckpoint(self, checkpoint):
+    """
+      Validates GA-specific settings in the checkpoint before restore. Calls super() for base checks.
+      @ In, checkpoint, dict, loaded checkpoint dict
+      @ Out, None
+    """
+    RavenSampled._validateCheckpoint(self, checkpoint)
+    settings = checkpoint.get('settings', {})
+    ckptPopSize = settings.get('populationSize')
+    if ckptPopSize is not None and ckptPopSize != self._populationSize:
+      self.raiseAnError(IOError,
+          f'Restart file population size ({ckptPopSize}) does not match the current population '
+          f'size ({self._populationSize}). Population size cannot change between runs.')
+    ckptIsMulti = settings.get('isMultiObjective')
+    if ckptIsMulti is not None and ckptIsMulti != self._isMultiObjective:
+      ckptMode = 'multi-objective' if ckptIsMulti else 'single-objective'
+      curMode  = 'multi-objective' if self._isMultiObjective else 'single-objective'
+      self.raiseAnError(IOError,
+          f'Restart file was written in {ckptMode} mode but the current configuration is '
+          f'{curMode}. This setting cannot change between runs.')
+
+  def _resolveNewGeneration(self, traj, rlz, info, pastPop=None, objectiveVal=None, fitness=None, g=None, ranks=None, CD=None):
     """
       Store a new Generation after checking convergence
       @ In, traj, int, trajectory for this new point
@@ -1058,7 +1171,7 @@ class GeneticAlgorithm(RavenSampled):
     # note the collection of the opt point
     self._stepTracker[traj]['opt'] = (rlz, info)
     acceptable = 'accepted' if self.counter > 1 else 'first'
-    converged = self._updateConvergence(traj, rlz, past_pop, acceptable)
+    converged = self._updateConvergence(traj, rlz, pastPop, acceptable)
     if converged:
       self._closeTrajectory(traj, 'converge', 'converged', self.multiBestObjective)
     # NOTE: the solution export needs to be updated BEFORE we run rejectOptPoint or extend the opt
@@ -1157,7 +1270,7 @@ class GeneticAlgorithm(RavenSampled):
       @ Out, point, dict, point used in this realization
     """
     varList = set(list(self.toBeSampled.keys()) + self._solutionExport.getVars('input') + self._solutionExport.getVars('output'))
-    #!varList = [var for var in varList if var not in self._objectiveVar] #!TODO:this appears to be desyncing the estimated 'final' rlzs. 
+    #!varList = [var for var in varList if var not in self._objectiveVar] #!TODO: this appears to be desyncing the estimated 'final' rlzs.
     selVars = [var for var in varList if var in rlz.data_vars]
 
     rankOneIDX = np.where(rank.data == 1)[0].tolist()

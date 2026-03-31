@@ -27,7 +27,7 @@ import numpy as np
 import xarray as xr
 from operator import itemgetter
 from ...utils import utils, randomUtils
-from ...utils.utils import EQchecker
+from ...utils.SSChecker import EQChecker, SingleCycleChecker
 
 def swapMutator(offSprings, distDict, **kwargs):
   """
@@ -52,17 +52,36 @@ def swapMutator(offSprings, distDict, **kwargs):
     children[i] = offSprings[i]
     ## TODO What happens if loc1 or 2 is out of range?! should we raise an error?
     if randomUtils.random(dim=1,samples=1)<=kwargs['mutationProb']:
-      # convert loc1 and loc2 in terms on cdf values
+      # convert loc1 and loc2 in terms of cdf values
       cdf1 = distDict[offSprings.coords['Gene'].values[loc1]].cdf(float(offSprings[i,loc1].values))
       cdf2 = distDict[offSprings.coords['Gene'].values[loc2]].cdf(float(offSprings[i,loc2].values))
       children[i,loc1] = distDict[offSprings.coords['Gene'].values[loc1]].ppf(cdf2)
       children[i,loc2] = distDict[offSprings.coords['Gene'].values[loc2]].ppf(cdf1)
   return children
 
+def swapMutatorSS(offSprings, distDict, **kwargs):
+  """
+    User-facing swap mutator dispatcher for PRLO shuffling scheme optimization.
+    Routes to swapMutatorEQ for equilibrium-cycle problems or swapMutatorSingleCycle
+    for single-cycle (Nth cycle) problems based on the calculationType in the prlodata file.
+    @ In, offSprings, xr.DataArray, children resulting from the crossover process
+    @ In, distDict, dict, dictionary containing distribution associated with each gene
+    @ In, kwargs, dict, see swapMutatorEQ / swapMutatorSingleCycle for full parameter list.
+    @ Out, children, xr.DataArray, the mutated chromosome, i.e., the child.
+  """
+  if not any("prlodata" in sublist for sublist in kwargs["files"]):
+    raise ValueError("'swapMutatorSS' requires a File of type 'prlodata'.")
+  inpfile = [sublist[-1] for sublist in kwargs["files"] if sublist[1]=='prlodata'][0]
+  prloData = EQChecker.PRLODataParser(inpfile.getPath()+inpfile.getFilename(), verbosity='reduced')
+  if prloData.calculationType in ["eq_cycle","eq_uprate"]:
+    return swapMutatorEQ(offSprings, distDict, **kwargs)
+  elif prloData.calculationType in ["single_cycle","single_uprate"] and prloData.numBatches > 1:
+    return swapMutatorSingleCycle(offSprings, distDict, **kwargs)
+  raise ValueError(f"'swapMutatorSS' does not support calculationType '{prloData.calculationType}' with the given parameters.")
+
 def swapMutatorEQ(offSprings, distDict, **kwargs):
   """
-    This method performs the swap mutator for multiple locations for EQ. For each child, 
-    two genes are sampled and switched
+    This method performs the swap mutator. For each child, two genes are sampled and switched
     E.g.:
     child=[a,b,c,d,e] --> b and d are selected --> child = [a,d,c,b,e]
     @ In, offSprings, xr.DataArray, children resulting from the crossover process
@@ -72,30 +91,111 @@ def swapMutatorEQ(offSprings, distDict, **kwargs):
           variables, list, variables names.
     @ Out, children, xr.DataArray, the mutated chromosome, i.e., the child.
   """
-  ## EQ check 
-  if kwargs['EQfiles'] is not None:
-    EQflag = True
-    tempfiles = kwargs['EQfiles']
-    temp = [sublist[-1] for sublist in tempfiles if sublist[1]=='simulatedata'][0]
-    xmlfile = temp.getPath()+ temp.getFilename()
-    temp = [sublist[-1] for sublist in tempfiles if sublist[1]=='EQinput'][0]
-    inpfile = temp.getPath()+temp.getFilename()
-    EQobject = EQchecker(xmlinput=xmlfile, EQinput=inpfile)
-  else:
-    EQflag = False 
+  # check for EQ input
+  EQFlag = False
+  if any("prlodata" in sublist for sublist in kwargs["files"]):
+    inpfile = [sublist[-1] for sublist in kwargs["files"] if sublist[1]=='prlodata'][0]
+    EQObject = EQChecker(inpfile.getPath()+inpfile.getFilename())
+    symMult = EQObject.prloData.symmetricMultiplicity
+    EQFlag = True if EQObject.prloData.calculationType in ["eq_cycle","eq_uprate"] else False
+  if not EQFlag:
+    raise ValueError("'swapMutatorEQ' is only appropriate of the 'eq_cycle' calculationType.")
+
   # initializing children
   children = xr.DataArray(np.zeros((np.shape(offSprings))),
                           dims=['chromosome','Gene'],
                           coords={'chromosome': np.arange(np.shape(offSprings)[0]),
                                   'Gene':kwargs['variables']})
+
   for i in range(np.shape(offSprings)[0]):
-    children[i][:] = offSprings[i][:]
-    if randomUtils.random(dim=1,samples=1)<=kwargs['mutationProb']:
-      # loc1, loc2 = locationsGenerator(offSprings, kwargs['locs'])
-      tempchild = children[i].T.values.tolist()
-      tempparent = offSprings[i].T.values.tolist()
-      loc2,child = EQobject.loc_mul(tempchild, tempparent) #swapping
-      children[i][:] = np.array(child)
+    antihang = 0
+    flag = False
+    while not flag: # ensure a valid selection.
+      children[i] = offSprings[i]
+      antihang += 1
+      if antihang >= 1000:
+        raise ValueError("swapMutatorEQ has failed to generate a valid genome.")
+      loc1, loc2 = locationsGenerator(offSprings, kwargs['locs'])
+      if symMult[loc1+1] != symMult[loc2+1]:
+        flag = False
+        continue
+
+      if randomUtils.random(dim=1,samples=1)<=kwargs['mutationProb']:
+        # convert loc1 and loc2 in terms of cdf values
+        cdf1 = distDict[offSprings.coords['Gene'].values[loc1]].cdf(float(offSprings[i,loc1].values))
+        cdf2 = distDict[offSprings.coords['Gene'].values[loc2]].cdf(float(offSprings[i,loc2].values))
+        children[i,loc1] = distDict[offSprings.coords['Gene'].values[loc1]].ppf(cdf2)
+        children[i,loc2] = distDict[offSprings.coords['Gene'].values[loc2]].ppf(cdf1)
+        # update any reloaded FA's pointing to the swapped positions
+        ##  check loc1
+        decodedFA = EQObject.decodeFAID(int(offSprings[i,loc1].values), EQObject.prloData.solnLen, EQObject.prloData.numBatches)
+        reloadedFA = EQObject.encodeFAID((loc1+1,decodedFA[1]+1,decodedFA[2]), EQObject.prloData.solnLen, EQObject.prloData.numBatches)
+        updatedFA = EQObject.encodeFAID((loc2+1,decodedFA[1]+1,decodedFA[2]), EQObject.prloData.solnLen, EQObject.prloData.numBatches)
+        for pos in range(np.shape(children[i])[0]):
+          if children[i,pos] == reloadedFA:
+            children[i,pos] = updatedFA
+        ##  check loc2
+        decodedFA = EQObject.decodeFAID(int(offSprings[i,loc2].values), EQObject.prloData.solnLen, EQObject.prloData.numBatches)
+        reloadedFA = EQObject.encodeFAID((loc2+1,decodedFA[1]+1,decodedFA[2]), EQObject.prloData.solnLen, EQObject.prloData.numBatches)
+        updatedFA = EQObject.encodeFAID((loc1+1,decodedFA[1]+1,decodedFA[2]), EQObject.prloData.solnLen, EQObject.prloData.numBatches)
+        for pos in range(np.shape(children[i])[0]):
+          if children[i,pos] == reloadedFA:
+            children[i,pos] = updatedFA
+
+      flag = EQObject.checkGenome(children[i],symMult)[0]
+
+  return children
+
+def swapMutatorSingleCycle(offSprings, distDict, **kwargs):
+  """
+    Swap mutator for single-cycle (Nth cycle) shuffling schemes.
+    For each child, two genes at symmetry-equivalent locations are swapped and
+    the result is validated against the SingleCycleChecker. No reload chain
+    propagation is needed since reload sources are fixed by the reload geometry.
+    @ In, offSprings, xr.DataArray, children resulting from the crossover process
+    @ In, distDict, dict, dictionary containing distribution associated with each gene
+    @ In, kwargs, dict, dictionary of parameters for this mutation method:
+          locs, list, the 2 locations of the genes to be swapped
+          mutationProb, float, probability that governs the mutation process
+          variables, list, variables names.
+          files, list, list of input files (must include a prlodata file).
+    @ Out, children, xr.DataArray, the mutated chromosome, i.e., the child.
+  """
+  if not any("prlodata" in sublist for sublist in kwargs["files"]):
+    raise ValueError("'swapMutatorSingleCycle' requires a File of type 'prlodata'.")
+  inpfile = [sublist[-1] for sublist in kwargs["files"] if sublist[1]=='prlodata'][0]
+  SCObject = SingleCycleChecker(inpfile.getPath()+inpfile.getFilename())
+  symMult = SCObject.prloData.symmetricMultiplicity
+
+  children = xr.DataArray(np.zeros((np.shape(offSprings))),
+                          dims=['chromosome','Gene'],
+                          coords={'chromosome': np.arange(np.shape(offSprings)[0]),
+                                  'Gene':kwargs['variables']})
+
+  for i in range(np.shape(offSprings)[0]):
+    antihang = 0
+    flag = False
+    while not flag:
+      children[i] = offSprings[i]
+      antihang += 1
+      if antihang >= 1000:
+        raise ValueError("swapMutatorSingleCycle has failed to generate a valid genome.")
+      loc1, loc2 = locationsGenerator(offSprings, kwargs['locs'])
+      if symMult[loc1+1] != symMult[loc2+1]:
+        flag = False
+        continue
+
+      if randomUtils.random(dim=1,samples=1)<=kwargs['mutationProb']:
+        gene1 = int(children[i,loc1].values)
+        gene2 = int(children[i,loc2].values)
+        _,b1,t1 = SCObject.decodeFAID(gene1,SCObject.prloData.solnLen,SCObject.prloData.numBatches)
+        _,b2,t2 = SCObject.decodeFAID(gene2,SCObject.prloData.solnLen,SCObject.prloData.numBatches)
+        # Re-encode with the new destination location
+        children[i,loc1] = SCObject.encodeFAID((loc1+1,1,t2),SCObject.prloData.solnLen,SCObject.prloData.numBatches) if b2==1 else gene2
+        children[i,loc2] = SCObject.encodeFAID((loc2+1,1,t1),SCObject.prloData.solnLen,SCObject.prloData.numBatches) if b1==1 else gene1
+
+      flag = SCObject.checkGenome(children[i],symMult)[0]
+
   return children
 
 # @profile
@@ -236,12 +336,12 @@ def locationsGenerator(offSprings,locs):
   return loc1, loc2
 
 __mutators = {}
-__mutators['swapMutator']       = swapMutator
-__mutators['swapMutatorEQ']     = swapMutatorEQ
-__mutators['scrambleMutator']   = scrambleMutator
-__mutators['bitFlipMutator']    = bitFlipMutator
-__mutators['inversionMutator']  = inversionMutator
-__mutators['randomMutator']     = randomMutator
+__mutators['swapMutator']         = swapMutator
+__mutators['swapMutatorSS']       = swapMutatorSS
+__mutators['scrambleMutator']     = scrambleMutator
+__mutators['bitFlipMutator']      = bitFlipMutator
+__mutators['inversionMutator']    = inversionMutator
+__mutators['randomMutator']       = randomMutator
 
 
 def returnInstance(cls, name):
