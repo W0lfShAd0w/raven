@@ -49,6 +49,8 @@ class _PRLOCheckerBase():
         self.geometry            = self.parseXMLInput(root,'geometry')
         countFuelLocs = len([int(x) for x in self.parseXMLInput(root,'geometry').split() if "00" not in x and "r" not in x])
         self.numAssemblies       = self.parseXMLInput(root,'numAssemblies',datatype=int,default=countFuelLocs)
+        self.reloadCycle     = self.parseXMLInput(root,'reloadCycle',datatype=Path,default=None)
+        self.reloadGeometry  = self.parseXMLInput(root,'reloadGeometry',default=None)
 
         self.coreShape = re.sub(r"r\d",'0',re.sub(r"\d+",'1',self.geometry.replace('00',' ')))
         self.solnLen = max([int(s) for s in self.geometry.split() if s.isdigit()])
@@ -91,8 +93,6 @@ class _PRLOCheckerBase():
         self.inpHistFile     = self.parseXMLInput(root,'inpHistFile',default=None)
         self.xsLib           = self.parseXMLInput(root,'xsLib',datatype=Path,default='.')
         self.xsExtension     = self.parseXMLInput(root,'xsExtension',default='')
-        self.reloadCycle     = self.parseXMLInput(root,'reloadCycle',datatype=Path,default=None)
-        self.reloadGeometry  = self.parseXMLInput(root,'reloadGeometry',default=None)
 
         fuelMap = [int(s) for s in self.geometry.split() if s.isdigit()]
         self.symmetricMultiplicity = {i:fuelMap.count(i) for i in fuelMap}
