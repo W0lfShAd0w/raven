@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os, re
+import re
 import numpy as np
+from pathlib import Path
 from xml.etree import ElementTree as ET
 
 
@@ -25,35 +26,33 @@ class _PRLOCheckerBase():
   """
 
   class PRLODataParser():
-    """
-      Interprets the data from the PRLO data file in '.xml'.
-      This is a trimmed down version of the PARCSv345InpGen.PRLODataParser class.
-      #!NOTE(rollnk): it is likely more elegant to have a single, external version of this class rather than redefine it repeatedly.
-    """
     def __init__(self, inputFile, verbosity="full"):
       """
-        Constructor.
-        @ In, inputFile, string, xml PARCSv345 parameters file
-        @ Out, None
+      Constructor. This XML file parser supports a large number of input tags. The
+      'verbosity' argument can be provided to reduce the time and memory spent
+      parsing the input.
+
+      @ In, inputFile, string, xml PARCSv345 parameters file
+      @ Out, None
       """
-      fullFile = os.path.join(inputFile)
-      dorm = ET.parse(fullFile)
+      self.dataFile = Path(inputFile)
+      dorm = ET.parse(self.dataFile)
       root = dorm.getroot()
 
-      # Parse user-provided data from XML file
-      #!TODO: define default values for missing params; list expected formats/units here.
       if verbosity in ['calcType','full','reduced']:
-        self.calculationType = '_'.join(root.find('calculationType').text.strip().lower().split()) if root.find('calculationType') is not None else "single_cycle"
+        self.calculationType     = '_'.join(self.parseXMLInput(root,'calculationType',default="single_cycle").lower().split())
       if verbosity in ['full','reduced']:
-        self.numAssemblies = int(root.find('numAssemblies').text.strip())
-        self.numBatches = int(root.find('numBatches').text.strip())
-        self.feedBatchSizeLimits = root.find('feedBatchSizeLimits').text.strip() if root.find('feedBatchSizeLimits') is not None else None
-        self.colLabels = root.find('colLabels').text.strip()
-        self.rowLabels = root.find('rowLabels').text.strip()
-        self.geometry = root.find('geometry').text.strip()
-        self.reloadGeometry = root.find('reloadGeometry').text.strip() if root.find('reloadGeometry') is not None else None
-        #!self.coreShape = root.find('coreShape').text # DEPRECATED
-        self.coreShape = re.sub(r"\d{2}",'1',re.sub(r"r\d",'0',self.geometry.replace('00','  ')))
+        self.numBatches          = self.parseXMLInput(root,'numBatches',datatype=int,default=1)
+        self.feedBatchSizeLimits = self.parseXMLInput(root,'feedBatchSizeLimits',default=None)
+        self.colLabels           = self.parseXMLInput(root,'colLabels')
+        self.rowLabels           = self.parseXMLInput(root,'rowLabels')
+        self.geometry            = self.parseXMLInput(root,'geometry')
+        countFuelLocs = len([int(x) for x in self.parseXMLInput(root,'geometry').split() if "00" not in x and "r" not in x])
+        self.numAssemblies       = self.parseXMLInput(root,'numAssemblies',datatype=int,default=countFuelLocs)
+        self.reloadCycle     = self.parseXMLInput(root,'reloadCycle',datatype=Path,default=None)
+        self.reloadGeometry  = self.parseXMLInput(root,'reloadGeometry',default=None)
+
+        self.coreShape = re.sub(r"r\d",'0',re.sub(r"\d+",'1',self.geometry.replace('00',' ')))
         self.solnLen = max([int(s) for s in self.geometry.split() if s.isdigit()])
         self.faDict = []
         for fa in root.iter('FA'):
@@ -75,29 +74,49 @@ class _PRLOCheckerBase():
             self.feedBatchSizeLimits = (self.feedBatchSizeLimits[0],self.feedBatchSizeLimits[-1]) #ensure only two values are provided.
 
       if verbosity in ['full']:
-        self.useTemplate = self.str_to_bool(root.find('useTemplate').text.strip()) if root.find('useTemplate') is not None else False
-        self.THFlag = self.str_to_bool(root.find('THFlag').text.strip()) if root.find('THFlag') is not None else False
-        self.power = float(root.find('power').text.strip()) if root.find('power') is not None else 100.0
-        self.coreType = root.find('coreType').text.strip().upper() if root.find('coreType') is not None else "PWR"
-        self.initialExposure = float(root.find('initialExposure').text.strip()) if root.find('initialExposure') is not None else 0.00
-        self.initialBoron = int(root.find('initialBoron').text.strip())
-        self.pinPowerRecFlag = self.str_to_bool(root.find('pinPowerRecFlag').text.strip())
-        self.numAxial = int(root.find('numAxial').text.strip())
-        self.BC = root.find('BC').text.strip()
-        self.faPower = float(root.find('faPower').text.strip())
-        self.faPitch = float(root.find('faPitch').text.strip())
-        self.inletTemp = float(root.find('inletTemp').text.strip())
-        self.flow = float(root.find('flow').text.strip()) #!TODO: I believe this is mass flow; doublecheck
-        self.depHistory = root.find('depHistory').text.strip()
-        self.inpHistFile = root.find('inpHistFile').text.strip() if root.find('inpHistFile') is not None else None
-        self.xsLib = root.find('xsLib').text.strip()
-        self.xsExtension = root.find('xsExtension').text.strip()
+        self.useTemplate     = self.strToBool(self.parseXMLInput(root,'useTemplate',default="False"))
+        dflt = "no default" if not self.useTemplate else None
+        self.THFlag          = self.strToBool(self.parseXMLInput(root,'THFlag',default="False"))
+        self.pinPowerRecFlag = self.strToBool(self.parseXMLInput(root,'pinPowerRecFlag',default="False"))
+        self.power           = self.parseXMLInput(root,'power',datatype=float,default=100.0)
+        self.coreType        = self.parseXMLInput(root,'coreType',default="PWR")
+        self.initialExposure = self.parseXMLInput(root,'initialExposure',datatype=float,default=0.00)
+        self.initialBoron    = self.parseXMLInput(root,'initialBoron',datatype=int,default=1000)
+        self.numAxial        = self.parseXMLInput(root,'numAxial',datatype=int,default=dflt)
+        self.gridZ           = self.parseXMLInput(root,'gridZ',default=dflt)
+        self.BC              = self.parseXMLInput(root,'BC',default=dflt)
+        self.faPower         = self.parseXMLInput(root,'faPower',datatype=float,default=dflt)
+        self.faPitch         = self.parseXMLInput(root,'faPitch',datatype=float,default=dflt)
+        self.inletTemp       = self.parseXMLInput(root,'inletTemp',datatype=float,default=dflt)
+        self.flow            = self.parseXMLInput(root,'flow',datatype=float,default=dflt) # coolant mass flow in kg/s/FA
+        self.depHistory      = self.parseXMLInput(root,'depHistory',default=dflt)
+        self.inpHistFile     = self.parseXMLInput(root,'inpHistFile',default=None)
+        self.xsLib           = self.parseXMLInput(root,'xsLib',datatype=Path,default='.')
+        self.xsExtension     = self.parseXMLInput(root,'xsExtension',default='')
 
         fuelMap = [int(s) for s in self.geometry.split() if s.isdigit()]
         self.symmetricMultiplicity = {i:fuelMap.count(i) for i in fuelMap}
         del self.symmetricMultiplicity[0] #locations are 1-indexed; '0' is the void space.
 
-    def str_to_bool(self,string):
+    def parseXMLInput(self,root,tag,datatype=str,default="no default"):
+      """
+      Method to parse input values from the PRLO data XLM file.
+      @ In, root, ElementTree.Element, the contents of the PRLO data XLM input file.
+      @ In, tag, str, name of the XML node or tag to be parsed.
+      @ In, datatype, type, the desired datatype of the parsed value.
+      @ In, default, the default value to be returned if tag is not found in root.
+      @ Out, str or datatype, parsed value from the PRLO data XML file.
+      """
+      parsedValue = root.find(tag)
+      if default == "no default":
+        try:
+          return datatype(parsedValue.text.strip())
+        except AttributeError as e:
+          raise AttributeError(f"Tag {tag} in provided PRLOdata.xml file is missing and has no default value.")
+      else:
+        return datatype(parsedValue.text.strip()) if parsedValue is not None else default
+
+    def strToBool(self,string):
       if string.lower() in ['t','true','1','yes','y']:
         return True
       elif string.lower() in ['f','false','0','no','n']:
