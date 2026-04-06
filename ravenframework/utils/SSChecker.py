@@ -58,6 +58,9 @@ class _PRLOCheckerBase():
         for fa in root.iter('FA'):
           self.faDict.append(fa.attrib)
         self.numTypes = len([fa for fa in self.faDict if fa['type'] == 'fuel'])
+        self.wabaTypes = {i + 1 for i, fa in enumerate([f for f in self.faDict if f['type'] == 'fuel'])
+                          if fa.get('waba', 'false').lower() in ['true', '1', 'yes', 't', 'y']}
+        self.crBank = self.parseXMLInput(root, 'crBank', default=None)
         self.xsDict =[]
         for xs in root.iter('XS'):
           self.xsDict.append(xs.attrib)
@@ -72,6 +75,19 @@ class _PRLOCheckerBase():
             self.feedBatchSizeLimits = (np.ceil(self.numAssemblies/self.numBatches),self.feedBatchSizeLimits[0])
           else:
             self.feedBatchSizeLimits = (self.feedBatchSizeLimits[0],self.feedBatchSizeLimits[-1]) #ensure only two values are provided.
+
+        # Resolve CR bank location set from crBank token string (parallel to geometry)
+        crBankLocSet = set()
+        if getattr(self, 'crBank', None) is not None:
+          crBankTokens = self.crBank.strip().split()
+          geom = self.geometry.strip().split()
+          for geomToken, crToken in zip(geom, crBankTokens):
+            if str(geomToken).isdigit() and int(geomToken) != 0 and int(crToken) == 1:
+              crBankLocSet.add(int(geomToken))
+        self.crBankLocSet = crBankLocSet
+
+        if getattr(self, 'wabaTypes', set()) and not crBankLocSet:
+          print("WARNING: WABA FA types are defined but no <crBank> was provided. WABA assemblies will not be excluded from any location.")
 
       if verbosity in ['full']:
         self.useTemplate     = self.strToBool(self.parseXMLInput(root,'useTemplate',default="False"))
