@@ -57,8 +57,9 @@ class _PRLOCheckerBase():
         self.faDict = []
         for fa in root.iter('FA'):
           self.faDict.append(fa.attrib)
-        self.numTypes = len([fa for fa in self.faDict if fa['type'] == 'fuel'])
-        self.wabaTypes = {i + 1 for i, fa in enumerate([f for f in self.faDict if f['type'] == 'fuel'])
+        self.fuelFADict = [fa for fa in self.faDict if fa['type'] == 'fuel']
+        self.numTypes = len(self.fuelFADict)
+        self.wabaTypes = {i + 1 for i, fa in enumerate(self.fuelFADict)
                           if fa.get('waba', 'false').lower() in ['true', '1', 'yes', 't', 'y']}
         self.crBank = self.parseXMLInput(root, 'crBank', default=None)
         self.xsDict =[]
@@ -200,6 +201,10 @@ class EQChecker(_PRLOCheckerBase):
       @ Out, bool, False if any check is violated; True otherwise.
       @ Out, int, Error code to indicate what caused the failure.
     """
+  ## Assert: genome length matches desired solution length
+    if len(genome) != self.prloData.solnLen:
+      return False, 7
+
     decodedGenomeWithMult = [(self.decodeFAID(genome[l],self.prloData.solnLen,self.prloData.numBatches),symMult[l+1]) for l in range(len(genome))]
     zoneMap = [l[0][1] for l in decodedGenomeWithMult]
 
@@ -253,6 +258,12 @@ class EQChecker(_PRLOCheckerBase):
         if batchNum == 1 and typeNum in wabaTypes and (i + 1) in crBankLocSet:
           return False, 6
 
+  ## Assert: all FAID values are valid
+    maxFAID = self.prloData.solnLen * self.prloData.numBatches * self.prloData.numTypes - 1
+    for gene in genome:
+      if gene > maxFAID:
+        return False, 8
+
     return True, 0
 
 
@@ -289,11 +300,11 @@ class SingleCycleChecker(_PRLOCheckerBase):
       raise ValueError("SingleCycleChecker requires 'reloadGeometry' be provided in the PRLO data input.")
 
     reloadTokens = self.prloData.reloadGeometry.strip().split()
-    geometryTokens = self.prloData.geometry.strip().split()
+    geometryTokens = self.prloData.geometry if isinstance(self.prloData.geometry, list) else self.prloData.geometry.strip().split()
     if len(reloadTokens) != len(geometryTokens):
       raise ValueError("reloadGeometry must contain the same number of entries as geometry.")
 
-    fuelLabelMap = {fa['label']: i + 1 for i, fa in enumerate(self.prloData.faDict) if fa['type'].lower() == 'fuel'}
+    fuelLabelMap = {fa['label']: i + 1 for i, fa in enumerate(self.prloData.fuelFADict)}
     reloadMapDict = {}
     for geomToken, reloadToken in zip(geometryTokens, reloadTokens):
       if not str(geomToken).isdigit() or int(geomToken) == 0:
@@ -363,5 +374,11 @@ class SingleCycleChecker(_PRLOCheckerBase):
         _, batchNum, typeNum = self.decodeFAID(int(gene), self.prloData.solnLen, self.prloData.numBatches)
         if batchNum == 1 and typeNum in wabaTypes and (i + 1) in crBankLocSet:
           return False, 9
+
+  ## Assert: all FAID values are valid
+    maxFAID = self.prloData.solnLen * self.prloData.numBatches * self.prloData.numTypes - 1
+    for gene in genome:
+      if gene > maxFAID:
+        return False, 10
 
     return True, 0
