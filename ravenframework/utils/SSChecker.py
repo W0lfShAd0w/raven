@@ -108,6 +108,11 @@ class _PRLOCheckerBase():
       @ Out, str or datatype, parsed value from the PRLO data XML file.
       """
       parsedValue = root.find(tag)
+      if parsedValue is None:
+        matches = root.findall(f'.//{tag}')
+        if len(matches) > 1:
+          raise AttributeError(f"Tag {tag} in provided PRLOdata.xml file appears multiple times.")
+        parsedValue = matches[0] if matches else None
       if default == "no default":
         try:
           return datatype(parsedValue.text.strip())
