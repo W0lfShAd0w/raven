@@ -109,10 +109,11 @@ class _PRLOCheckerBase():
       """
       parsedValue = root.find(tag)
       if parsedValue is None:
-        matches = root.findall(f'.//{tag}')
-        if len(matches) > 1:
-          raise AttributeError(f"Tag {tag} in provided PRLOdata.xml file appears multiple times.")
-        parsedValue = matches[0] if matches else None
+        for sectionName in ('PARCS', 'Parcs', 'parcs', 'SIMULATE', 'Simulate', 'simulate', 'CORE', 'Core', 'core'):
+          sectionNode = root.find(sectionName)
+          parsedValue = sectionNode.find(tag) if sectionNode is not None else None
+          if parsedValue is not None:
+            break
       if default == "no default":
         try:
           return datatype(parsedValue.text.strip())
