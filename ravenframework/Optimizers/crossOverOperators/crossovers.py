@@ -105,8 +105,9 @@ def uniformCrossover(parents,**kwargs):
   if any("prlodata" in sublist for sublist in kwargs["files"]):
     inpfile = [sublist[-1] for sublist in kwargs["files"] if sublist[1]=='prlodata'][0]
     EQObject = EQChecker(inpfile.getPath()+inpfile.getFilename())
-    EQFlag = EQObject.prloData.calculationType in ["eq_cycle","eq_uprate"]
-    SCFlag = EQObject.prloData.calculationType in ["single_cycle","single_uprate"] and EQObject.prloData.numBatches > 1
+    effectiveType = EQObject.prloData.phase1CalcType if EQObject.prloData.calculationType == "coupled_transient" else EQObject.prloData.calculationType
+    EQFlag = effectiveType in ["eq_cycle","eq_uprate"]
+    SCFlag = effectiveType in ["single_cycle","single_uprate"] and EQObject.prloData.numBatches > 1
   if SCFlag:
     SCObject = SingleCycleChecker(inpfile.getPath()+inpfile.getFilename())
 

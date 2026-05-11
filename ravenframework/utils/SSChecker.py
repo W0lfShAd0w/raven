@@ -41,6 +41,10 @@ class _PRLOCheckerBase():
 
       if verbosity in ['calcType','full','reduced']:
         self.calculationType     = '_'.join(self.parseXMLInput(root,'calculationType',default="single_cycle").lower().split())
+        _p53dNode                = root.find("PARCSR53DSettings")
+        _p53dRoot                = _p53dNode if _p53dNode is not None else root
+        _phase1Raw               = self.parseXMLInput(_p53dRoot,'phase1CalcType',default=None)
+        self.phase1CalcType      = '_'.join(_phase1Raw.lower().split()) if _phase1Raw else None
       if verbosity in ['full','reduced']:
         self.numBatches          = self.parseXMLInput(root,'numBatches',datatype=int,default=1)
         self.feedBatchSizeLimits = self.parseXMLInput(root,'feedBatchSizeLimits',default=None)

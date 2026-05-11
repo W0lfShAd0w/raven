@@ -73,9 +73,10 @@ def swapMutatorSS(offSprings, distDict, **kwargs):
     raise ValueError("'swapMutatorSS' requires a File of type 'prlodata'.")
   inpfile = [sublist[-1] for sublist in kwargs["files"] if sublist[1]=='prlodata'][0]
   prloData = EQChecker.PRLODataParser(inpfile.getPath()+inpfile.getFilename(), verbosity='reduced')
-  if prloData.calculationType in ["eq_cycle","eq_uprate"]:
+  effectiveType = prloData.phase1CalcType if prloData.calculationType == "coupled_transient" else prloData.calculationType
+  if effectiveType in ["eq_cycle","eq_uprate"]:
     return swapMutatorEQ(offSprings, distDict, **kwargs)
-  elif prloData.calculationType in ["single_cycle","single_uprate"] and prloData.numBatches > 1:
+  elif effectiveType in ["single_cycle","single_uprate"] and prloData.numBatches > 1:
     return swapMutatorSingleCycle(offSprings, distDict, **kwargs)
   raise ValueError(f"'swapMutatorSS' does not support calculationType '{prloData.calculationType}' with the given parameters.")
 
@@ -97,7 +98,8 @@ def swapMutatorEQ(offSprings, distDict, **kwargs):
     inpfile = [sublist[-1] for sublist in kwargs["files"] if sublist[1]=='prlodata'][0]
     EQObject = EQChecker(inpfile.getPath()+inpfile.getFilename())
     symMult = EQObject.prloData.symmetricMultiplicity
-    EQFlag = True if EQObject.prloData.calculationType in ["eq_cycle","eq_uprate"] else False
+    effectiveType = EQObject.prloData.phase1CalcType if EQObject.prloData.calculationType == "coupled_transient" else EQObject.prloData.calculationType
+    EQFlag = effectiveType in ["eq_cycle","eq_uprate"]
   if not EQFlag:
     raise ValueError("'swapMutatorEQ' is only appropriate of the 'eq_cycle' calculationType.")
 
