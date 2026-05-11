@@ -837,7 +837,7 @@ class Code(Model):
       ## Check if the user specified any file extensions for clean up
       for fileExt in fileExtensionsToDelete:
         pattern = '*.'+fileExt.removeprefix('.').removeprefix('*.')
-        for path in Path(metaData['subDirectory']).glob(pattern):
+        for path in Path(metaData['subDirectory']).rglob(pattern):
             if path.is_file():
                 path.unlink()
 
