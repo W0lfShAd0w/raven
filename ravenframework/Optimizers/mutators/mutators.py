@@ -29,6 +29,40 @@ from operator import itemgetter
 from ...utils import utils, randomUtils
 from ...utils.SSChecker import EQChecker, SingleCycleChecker
 
+_prloDataCache = {}
+_eqCheckerCache = {}
+_singleCycleCheckerCache = {}
+
+def _getPrloData(inputFile):
+  """
+    Return cached reduced PRLO data for shuffling-scheme dispatch.
+    @ In, inputFile, str, PRLO data XML path
+    @ Out, prloData, PRLODataParser, parsed PRLO data
+  """
+  if inputFile not in _prloDataCache:
+    _prloDataCache[inputFile] = EQChecker.PRLODataParser(inputFile, verbosity='reduced')
+  return _prloDataCache[inputFile]
+
+def _getEQChecker(inputFile):
+  """
+    Return cached equilibrium-cycle checker.
+    @ In, inputFile, str, PRLO data XML path
+    @ Out, checker, EQChecker, cached checker
+  """
+  if inputFile not in _eqCheckerCache:
+    _eqCheckerCache[inputFile] = EQChecker(inputFile)
+  return _eqCheckerCache[inputFile]
+
+def _getSingleCycleChecker(inputFile):
+  """
+    Return cached single-cycle checker.
+    @ In, inputFile, str, PRLO data XML path
+    @ Out, checker, SingleCycleChecker, cached checker
+  """
+  if inputFile not in _singleCycleCheckerCache:
+    _singleCycleCheckerCache[inputFile] = SingleCycleChecker(inputFile)
+  return _singleCycleCheckerCache[inputFile]
+
 def swapMutator(offSprings, distDict, **kwargs):
   """
     This method performs the swap mutator. For each child, two genes are sampled and switched
@@ -72,7 +106,7 @@ def swapMutatorSS(offSprings, distDict, **kwargs):
   if not any("prlodata" in sublist for sublist in kwargs["files"]):
     raise ValueError("'swapMutatorSS' requires a File of type 'prlodata'.")
   inpfile = [sublist[-1] for sublist in kwargs["files"] if sublist[1]=='prlodata'][0]
-  prloData = EQChecker.PRLODataParser(inpfile.getPath()+inpfile.getFilename(), verbosity='reduced')
+  prloData = _getPrloData(inpfile.getPath()+inpfile.getFilename())
   if prloData.calculationType in ["eq_cycle","eq_uprate"]:
     return swapMutatorEQ(offSprings, distDict, **kwargs)
   elif prloData.calculationType in ["single_cycle","single_uprate"] and prloData.numBatches > 1:
@@ -95,7 +129,7 @@ def swapMutatorEQ(offSprings, distDict, **kwargs):
   EQFlag = False
   if any("prlodata" in sublist for sublist in kwargs["files"]):
     inpfile = [sublist[-1] for sublist in kwargs["files"] if sublist[1]=='prlodata'][0]
-    EQObject = EQChecker(inpfile.getPath()+inpfile.getFilename())
+    EQObject = _getEQChecker(inpfile.getPath()+inpfile.getFilename())
     symMult = EQObject.prloData.symmetricMultiplicity
     EQFlag = True if EQObject.prloData.calculationType in ["eq_cycle","eq_uprate"] else False
   if not EQFlag:
@@ -126,6 +160,19 @@ def swapMutatorEQ(offSprings, distDict, **kwargs):
         cdf2 = distDict[offSprings.coords['Gene'].values[loc2]].cdf(float(offSprings[i,loc2].values))
         children[i,loc1] = distDict[offSprings.coords['Gene'].values[loc1]].ppf(cdf2)
         children[i,loc2] = distDict[offSprings.coords['Gene'].values[loc2]].ppf(cdf1)
+        # Fresh fuel (batch 1) must point to its own destination location.
+        # Swapping two fresh genes without re-encoding can create a cross-link
+        # between fresh locations, which later shuffling-chain tracing treats
+        # as an invalid reload cycle.
+        for swapLoc in (loc1, loc2):
+          rawFAID = int(children[i, swapLoc].values)
+          decodedFA = EQObject.decodeFAID(rawFAID, EQObject.prloData.solnLen, EQObject.prloData.numBatches)
+          if decodedFA[1] == 1:
+            children[i, swapLoc] = EQObject.encodeFAID(
+              (swapLoc + 1, decodedFA[1], decodedFA[2]),
+              EQObject.prloData.solnLen,
+              EQObject.prloData.numBatches,
+            )
         # update any reloaded FA's pointing to the swapped positions
         ##  check loc1
         decodedFA = EQObject.decodeFAID(int(offSprings[i,loc1].values), EQObject.prloData.solnLen, EQObject.prloData.numBatches)
@@ -164,7 +211,7 @@ def swapMutatorSingleCycle(offSprings, distDict, **kwargs):
   if not any("prlodata" in sublist for sublist in kwargs["files"]):
     raise ValueError("'swapMutatorSingleCycle' requires a File of type 'prlodata'.")
   inpfile = [sublist[-1] for sublist in kwargs["files"] if sublist[1]=='prlodata'][0]
-  SCObject = SingleCycleChecker(inpfile.getPath()+inpfile.getFilename())
+  SCObject = _getSingleCycleChecker(inpfile.getPath()+inpfile.getFilename())
   symMult = SCObject.prloData.symmetricMultiplicity
 
   children = xr.DataArray(np.zeros((np.shape(offSprings))),

@@ -30,6 +30,40 @@ import xarray as xr
 from ...utils import randomUtils
 from ...utils.SSChecker import EQChecker, SingleCycleChecker
 
+_prloDataCache = {}
+_eqCheckerCache = {}
+_singleCycleCheckerCache = {}
+
+def _getPrloData(inputFile):
+  """
+    Return cached reduced PRLO data for shuffling-scheme dispatch.
+    @ In, inputFile, str, PRLO data XML path
+    @ Out, prloData, PRLODataParser, parsed PRLO data
+  """
+  if inputFile not in _prloDataCache:
+    _prloDataCache[inputFile] = EQChecker.PRLODataParser(inputFile, verbosity='reduced')
+  return _prloDataCache[inputFile]
+
+def _getEQChecker(inputFile):
+  """
+    Return cached equilibrium-cycle checker.
+    @ In, inputFile, str, PRLO data XML path
+    @ Out, checker, EQChecker, cached checker
+  """
+  if inputFile not in _eqCheckerCache:
+    _eqCheckerCache[inputFile] = EQChecker(inputFile)
+  return _eqCheckerCache[inputFile]
+
+def _getSingleCycleChecker(inputFile):
+  """
+    Return cached single-cycle checker.
+    @ In, inputFile, str, PRLO data XML path
+    @ Out, checker, SingleCycleChecker, cached checker
+  """
+  if inputFile not in _singleCycleCheckerCache:
+    _singleCycleCheckerCache[inputFile] = SingleCycleChecker(inputFile)
+  return _singleCycleCheckerCache[inputFile]
+
 
 # @profile
 def onePointCrossover(parents,**kwargs):
@@ -104,11 +138,14 @@ def uniformCrossover(parents,**kwargs):
   SCFlag = False
   if any("prlodata" in sublist for sublist in kwargs["files"]):
     inpfile = [sublist[-1] for sublist in kwargs["files"] if sublist[1]=='prlodata'][0]
-    EQObject = EQChecker(inpfile.getPath()+inpfile.getFilename())
-    EQFlag = EQObject.prloData.calculationType in ["eq_cycle","eq_uprate"]
-    SCFlag = EQObject.prloData.calculationType in ["single_cycle","single_uprate"] and EQObject.prloData.numBatches > 1
-  if SCFlag:
-    SCObject = SingleCycleChecker(inpfile.getPath()+inpfile.getFilename())
+    prloDataFile = inpfile.getPath()+inpfile.getFilename()
+    prloData = _getPrloData(prloDataFile)
+    EQFlag = prloData.calculationType in ["eq_cycle","eq_uprate"]
+    SCFlag = prloData.calculationType in ["single_cycle","single_uprate"] and prloData.numBatches > 1
+    if EQFlag:
+      EQObject = _getEQChecker(prloDataFile)
+    elif SCFlag:
+      SCObject = _getSingleCycleChecker(prloDataFile)
 
   index = 0
   parentsPairs = list(combinations(parents,2))

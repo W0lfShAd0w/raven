@@ -108,6 +108,12 @@ class _PRLOCheckerBase():
       @ Out, str or datatype, parsed value from the PRLO data XML file.
       """
       parsedValue = root.find(tag)
+      if parsedValue is None:
+        for sectionName in ('PARCS', 'Parcs', 'parcs', 'SIMULATE', 'Simulate', 'simulate', 'CORE', 'Core', 'core'):
+          sectionNode = root.find(sectionName)
+          parsedValue = sectionNode.find(tag) if sectionNode is not None else None
+          if parsedValue is not None:
+            break
       if default == "no default":
         try:
           return datatype(parsedValue.text.strip())

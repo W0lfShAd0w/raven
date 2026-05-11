@@ -806,6 +806,35 @@ class GeneticAlgorithm(RavenSampled):
   ######################################################################################
 
   ## TODO: We have to estimate the max number of unique chromosomes and make sure population size doesn't exceed that number. Or should it?
+  def _coerceRealizationDataset(self, rlz, sampleCount=None):
+    """
+      Coerce dict-based realizations into Dataset form for GA processing.
+      @ In, rlz, xr.Dataset or dict, realization data to coerce
+      @ In, sampleCount, int, optional, expected number of RAVEN samples
+      @ Out, rlz, xr.Dataset, realization data in Dataset form
+    """
+    if hasattr(rlz, 'data_vars') or not isinstance(rlz, dict):
+      return rlz
+    if sampleCount is None:
+      lengths = []
+      for value in rlz.values():
+        arr = np.asarray(value)
+        if arr.ndim <= 1 and arr.size > 0:
+          lengths.append(arr.size)
+      sampleCount = max(lengths) if lengths else 1
+    data = {}
+    for var, value in rlz.items():
+      arr = np.asarray(value)
+      if arr.ndim == 0:
+        arr = arr.reshape(1)
+      if arr.ndim != 1 or arr.size == 0:
+        continue
+      if arr.size == 1 and sampleCount > 1:
+        arr = np.repeat(arr, sampleCount)
+      if arr.size == sampleCount:
+        data[var] = ('RAVEN_sample_ID', arr)
+    return xr.Dataset(data, coords={'RAVEN_sample_ID': np.arange(sampleCount)})
+
   def _useRealization(self, info, rlz):
     """
       Used to feedback the collected runs into actionable items within the sampler.
@@ -820,6 +849,7 @@ class GeneticAlgorithm(RavenSampled):
       self._closeTrajectory(t, 'cancel', 'Currently GA is single trajectory', 0)
     self.incrementIteration(traj)
 
+    rlz = self._coerceRealizationDataset(rlz)
 
     currentPopInputs = datasetToDataArray(rlz, list(self.toBeSampled))
     currentPop_objvals = []
@@ -1239,6 +1269,7 @@ class GeneticAlgorithm(RavenSampled):
       @ In, fitness, xr.DataArray, fitness values at each chromosome of the realization
       @ Out, point, dict, point used in this realization
     """
+    rlz = self._coerceRealizationDataset(rlz, len(np.atleast_1d(objectiveVal)))
     varList = list(self.toBeSampled.keys()) + self._solutionExport.getVars('input') + self._solutionExport.getVars('output')
     varList = set(varList)
     selVars = [var for var in varList if var in rlz.data_vars]
@@ -1269,6 +1300,7 @@ class GeneticAlgorithm(RavenSampled):
       @ In, constraintsV, xr.DataArray, calculated contraints value
       @ Out, point, dict, point used in this realization
     """
+    rlz = self._coerceRealizationDataset(rlz, len(np.atleast_1d(rank.data)))
     varList = set(list(self.toBeSampled.keys()) + self._solutionExport.getVars('input') + self._solutionExport.getVars('output'))
     #!varList = [var for var in varList if var not in self._objectiveVar] #!TODO: this appears to be desyncing the estimated 'final' rlzs.
     selVars = [var for var in varList if var in rlz.data_vars]
