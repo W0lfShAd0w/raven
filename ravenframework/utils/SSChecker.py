@@ -46,6 +46,18 @@ class _PRLOCheckerBase():
         _phase1Raw               = self.parseXMLInput(_p53dRoot,'phase1CalcType',default=None)
         self.phase1CalcType      = '_'.join(_phase1Raw.lower().split()) if _phase1Raw else None
       if verbosity in ['full','reduced']:
+        # unstructured_opt calcs may have no LWR assembly geometry;
+        # skip the blocks below to avoid AttributeError on tags with no default.
+        if self.calculationType == 'unstructured_opt':
+          self.numBatches = 1
+          self.feedBatchSizeLimits = None
+          self.colLabels = self.rowLabels = self.geometry = None
+          self.faDict = self.fuelFADict = []
+          self.numTypes = self.solnLen = self.numAssemblies = 0
+          self.wabaTypes = set()
+          self.crBankLocSet = set()
+          return
+
         self.numBatches          = self.parseXMLInput(root,'numBatches',datatype=int,default=1)
         self.feedBatchSizeLimits = self.parseXMLInput(root,'feedBatchSizeLimits',default=None)
         self.colLabels           = self.parseXMLInput(root,'colLabels')
