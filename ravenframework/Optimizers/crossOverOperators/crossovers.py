@@ -275,6 +275,14 @@ def uniformEQCrossoverMethod(parent1,parent2,crossoverProb,eqchecker):
     type-incompatible in the receiving child are skipped; these are conservatively
     deferred rather than producing a genome that fails checkGenome.
 
+    NOTE — when Pass 2 fires: Pass 2 swaps are accepted only when the proposed
+    new source has spare capacity (demand < symMult).  For standard equal-batch
+    EQ cores where every batch-(N-1) source is already fully demanded by batch-N
+    positions, Pass 2 makes no changes.  Pass 2 fires when batch sizes are
+    unequal (fewer batch-N assemblies than batch-(N-1)) or when lower-multiplicity
+    batch-N positions source from higher-multiplicity batch-(N-1) positions,
+    leaving residual capacity at the source.
+
     Both passes use the same crossoverProb gate.  The existing checkGenome + retry
     loop provides final validation; the demand and type checks in Pass 2 reduce
     the rejection rate significantly.
