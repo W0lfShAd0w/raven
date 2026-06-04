@@ -82,15 +82,35 @@ def swapMutatorSS(offSprings, distDict, **kwargs):
 
 def swapMutatorEQ(offSprings, distDict, **kwargs):
   """
-    This method performs the swap mutator. For each child, two genes are sampled and switched
-    E.g.:
-    child=[a,b,c,d,e] --> b and d are selected --> child = [a,d,c,b,e]
+    Swap mutator for equilibrium-cycle (EQ) PRLO shuffling schemes.
+    Two symmetry-equivalent gene locations are selected and swapped.  Two
+    distinct swap modes are applied depending on whether the selected genes
+    belong to the same batch or different batches:
+
+    Same-batch swap: exchanges the CDF-space values at loc1 and loc2, then
+    updates the immediate downstream reload reference for each position.  This
+    shuffles assemblies within the current zoning map without changing which
+    locations belong to which batch.
+
+    Cross-batch swap: exchanges the batch assignments of loc1 and loc2 by
+    directly re-encoding new FAID values.  loc1 takes on loc2's batch number,
+    reload source, and fuel type; loc2 takes on loc1's batch number and type
+    (re-encoded as fresh if loc1 was batch-1, otherwise inheriting loc1's
+    source).  Immediate downstream reload references for both positions are
+    updated so that the reload chain remains consistent.  This allows the GA to
+    explore different zoning map configurations during EQ optimisation runs.
+
+    In both modes the result is validated by checkGenome and retried if invalid.
+
     @ In, offSprings, xr.DataArray, children resulting from the crossover process
+    @ In, distDict, dict, dictionary of distributions associated with each gene
+          (used for CDF/PPF transforms in the same-batch case)
     @ In, kwargs, dict, dictionary of parameters for this mutation method:
           locs, list, the 2 locations of the genes to be swapped
-          mutationProb, float, probability that governs the mutation process, i.e., if prob < random number, then the mutation will occur
-          variables, list, variables names.
-    @ Out, children, xr.DataArray, the mutated chromosome, i.e., the child.
+          mutationProb, float, probability that a mutation is attempted
+          variables, list, variable names
+          files, list, input file list (must contain a prlodata entry)
+    @ Out, children, xr.DataArray, the mutated chromosome.
   """
   # check for EQ input
   EQFlag = False
@@ -102,6 +122,9 @@ def swapMutatorEQ(offSprings, distDict, **kwargs):
     EQFlag = effectiveType in ["eq_cycle","eq_uprate"]
   if not EQFlag:
     raise ValueError("'swapMutatorEQ' is only appropriate of the 'eq_cycle' calculationType.")
+
+  solnLen   = EQObject.prloData.solnLen
+  numBatches = EQObject.prloData.numBatches
 
   # initializing children
   children = xr.DataArray(np.zeros((np.shape(offSprings))),
@@ -123,26 +146,55 @@ def swapMutatorEQ(offSprings, distDict, **kwargs):
         continue
 
       if randomUtils.random(dim=1,samples=1)<=kwargs['mutationProb']:
-        # convert loc1 and loc2 in terms of cdf values
-        cdf1 = distDict[offSprings.coords['Gene'].values[loc1]].cdf(float(offSprings[i,loc1].values))
-        cdf2 = distDict[offSprings.coords['Gene'].values[loc2]].cdf(float(offSprings[i,loc2].values))
-        children[i,loc1] = distDict[offSprings.coords['Gene'].values[loc1]].ppf(cdf2)
-        children[i,loc2] = distDict[offSprings.coords['Gene'].values[loc2]].ppf(cdf1)
-        # update any reloaded FA's pointing to the swapped positions
-        ##  check loc1
-        decodedFA = EQObject.decodeFAID(int(offSprings[i,loc1].values), EQObject.prloData.solnLen, EQObject.prloData.numBatches)
-        reloadedFA = EQObject.encodeFAID((loc1+1,decodedFA[1]+1,decodedFA[2]), EQObject.prloData.solnLen, EQObject.prloData.numBatches)
-        updatedFA = EQObject.encodeFAID((loc2+1,decodedFA[1]+1,decodedFA[2]), EQObject.prloData.solnLen, EQObject.prloData.numBatches)
-        for pos in range(np.shape(children[i])[0]):
-          if children[i,pos] == reloadedFA:
-            children[i,pos] = updatedFA
-        ##  check loc2
-        decodedFA = EQObject.decodeFAID(int(offSprings[i,loc2].values), EQObject.prloData.solnLen, EQObject.prloData.numBatches)
-        reloadedFA = EQObject.encodeFAID((loc2+1,decodedFA[1]+1,decodedFA[2]), EQObject.prloData.solnLen, EQObject.prloData.numBatches)
-        updatedFA = EQObject.encodeFAID((loc1+1,decodedFA[1]+1,decodedFA[2]), EQObject.prloData.solnLen, EQObject.prloData.numBatches)
-        for pos in range(np.shape(children[i])[0]):
-          if children[i,pos] == reloadedFA:
-            children[i,pos] = updatedFA
+        # Decode original gene values to determine swap mode.
+        decoded1 = EQObject.decodeFAID(int(offSprings[i,loc1].values), solnLen, numBatches)
+        decoded2 = EQObject.decodeFAID(int(offSprings[i,loc2].values), solnLen, numBatches)
+        source1, batchNum1, type1 = decoded1
+        source2, batchNum2, type2 = decoded2
+
+        if batchNum1 == batchNum2:
+          # Same-batch swap: spatial shuffle within the current zoning map.
+          cdf1 = distDict[offSprings.coords['Gene'].values[loc1]].cdf(float(offSprings[i,loc1].values))
+          cdf2 = distDict[offSprings.coords['Gene'].values[loc2]].cdf(float(offSprings[i,loc2].values))
+          children[i,loc1] = distDict[offSprings.coords['Gene'].values[loc1]].ppf(cdf2)
+          children[i,loc2] = distDict[offSprings.coords['Gene'].values[loc2]].ppf(cdf1)
+          # update any reloaded FA's pointing to the swapped positions for loc1
+          reloadedFA = EQObject.encodeFAID((loc1+1, batchNum1+1, type1), solnLen, numBatches)
+          updatedFA  = EQObject.encodeFAID((loc2+1, batchNum1+1, type1), solnLen, numBatches)
+          for pos in range(np.shape(children[i])[0]):
+            if children[i,pos] == reloadedFA:
+              children[i,pos] = updatedFA
+          # update any reloaded FA's pointing to the swapped positions for loc2
+          reloadedFA = EQObject.encodeFAID((loc2+1, batchNum2+1, type2), solnLen, numBatches)
+          updatedFA  = EQObject.encodeFAID((loc1+1, batchNum2+1, type2), solnLen, numBatches)
+          for pos in range(np.shape(children[i])[0]):
+            if children[i,pos] == reloadedFA:
+              children[i,pos] = updatedFA
+
+        else:
+          # Cross-batch swap: exchange batch assignments to explore different zoning map configurations.
+          # Fresh assemblies (batch-1) must encode their own position as the source; reload assemblies
+          # inherit the source from the gene being moved to that location.
+          children[i,loc1] = (EQObject.encodeFAID((loc1+1, 1, type2), solnLen, numBatches)
+                              if batchNum2 == 1
+                              else EQObject.encodeFAID((source2, batchNum2, type2), solnLen, numBatches))
+          children[i,loc2] = (EQObject.encodeFAID((loc2+1, 1, type1), solnLen, numBatches)
+                              if batchNum1 == 1
+                              else EQObject.encodeFAID((source1, batchNum1, type1), solnLen, numBatches))
+          # Update downstream reload reference for loc1
+          if batchNum1 < numBatches:
+            oldReload = EQObject.encodeFAID((loc1+1, batchNum1+1, type1), solnLen, numBatches)
+            newReload = EQObject.encodeFAID((loc2+1, batchNum1+1, type1), solnLen, numBatches)
+            for pos in range(np.shape(children[i])[0]):
+              if children[i,pos] == oldReload:
+                children[i,pos] = newReload
+          # Update downstream reload reference for loc2
+          if batchNum2 < numBatches:
+            oldReload = EQObject.encodeFAID((loc2+1, batchNum2+1, type2), solnLen, numBatches)
+            newReload = EQObject.encodeFAID((loc1+1, batchNum2+1, type2), solnLen, numBatches)
+            for pos in range(np.shape(children[i])[0]):
+              if children[i,pos] == oldReload:
+                children[i,pos] = newReload
 
       flag = EQObject.checkGenome(children[i],symMult)[0]
 
