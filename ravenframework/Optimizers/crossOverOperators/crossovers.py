@@ -240,14 +240,38 @@ def uniformCrossoverMethod(parent1,parent2,crossoverProb):
 
 def uniformEQCrossoverMethod(parent1,parent2,crossoverProb,eqchecker):
   """
-    Method designed to perform a uniform crossover on 2 arrays
-    @ In, parent1: first array
-    @ In, parent2: second array
-    @ In, crossoverProb: crossover probability for each gene
-    @ In, eqchecker: utils.EQChecker object
-    @ Out, child1: first generated array
-    @ Out, child2: second generated array
+    Uniform crossover for equilibrium-cycle (EQ) PRLO shuffling schemes.
+    Two crossover passes are performed within each retry iteration:
+
+    Pass 1 — Fresh-batch (batch-1) crossover: positions where both parents carry
+    a batch-1 gene are eligible for fuel-type exchange.  When types differ,
+    updateFATypes propagates the change through the downstream reload chain.
+    This preserves the ILB behaviour for the fresh batch.
+
+    Pass 2 — Reload-batch crossover: positions where both children (after Pass 1)
+    carry the same batch number N > 1 AND the same fuel type are eligible for
+    source-location exchange.  This recombines the shuffling scheme — which
+    batch-(N-1) source feeds each batch-N destination — between the two parents.
+    A per-batch-level demand check prevents over-demanding any source location
+    beyond its symmetry multiplicity.  Positions where the proposed source is
+    type-incompatible in the receiving child are skipped; these are conservatively
+    deferred rather than producing a genome that fails checkGenome.
+
+    Both passes use the same crossoverProb gate.  The existing checkGenome + retry
+    loop provides final validation; the demand and type checks in Pass 2 reduce
+    the rejection rate significantly.
+
+    @ In, parent1, numpy.array, first parent chromosome
+    @ In, parent2, numpy.array, second parent chromosome
+    @ In, crossoverProb, float, per-gene crossover probability
+    @ In, eqchecker, EQChecker, logical constraint handler for EQ-cycle cases
+    @ Out, child1, numpy.array, first generated child chromosome
+    @ Out, child2, numpy.array, second generated child chromosome
   """
+  solnLen   = eqchecker.prloData.solnLen
+  numBatches = eqchecker.prloData.numBatches
+  symMult   = eqchecker.prloData.symmetricMultiplicity
+
   maxiter = 1000; iter = 0
   flag = False
   while not flag:
@@ -256,22 +280,70 @@ def uniformEQCrossoverMethod(parent1,parent2,crossoverProb,eqchecker):
 
     child1 = deepcopy(parent1)
     child2 = deepcopy(parent2)
+
+    # Pass 1 — Fresh-batch crossover (ILB behaviour preserved).
     for pos in range(parent1.size):
       #!NOTE(rollnk):this behavior of passing an eqchecker attribute into an eqchecker function is temporary until the EQ functions can be merged into the PRLO plugin.
-      p1decoded = eqchecker.decodeFAID(parent1[pos], eqchecker.prloData.solnLen, eqchecker.prloData.numBatches)
-      p2decoded = eqchecker.decodeFAID(parent2[pos], eqchecker.prloData.solnLen, eqchecker.prloData.numBatches)
-      #!TODO(rollnk):This is similar to the ILB method except the reloaded batches aren't randomized; they just receive updated FA types. ONLY FEED BATCH UNDERGOES CROSSOVER.
-      if p1decoded[1] == p2decoded[1] == 1: # only crossover if batch numbers are the same. This comes from the ILB method.
+      p1decoded = eqchecker.decodeFAID(parent1[pos], solnLen, numBatches)
+      p2decoded = eqchecker.decodeFAID(parent2[pos], solnLen, numBatches)
+      if p1decoded[1] == p2decoded[1] == 1: # only crossover if batch numbers match at batch-1.
         if randomUtils.random(dim=1,samples=1)<crossoverProb:
           child1[pos] = parent2[pos]
           child2[pos] = parent1[pos]
-          if p1decoded[2] != p2decoded[2]: # FA types don't match; check for reloads and update those FAtypes as well.
+          if p1decoded[2] != p2decoded[2]: # FA types don't match; propagate type change to reload chain.
+            #!NOTE(rollnk):this behavior of passing an eqchecker attribute into an eqchecker function is temporary until the EQ functions can be merged into the PRLO plugin.
             child1 = updateFATypes(pos+1,p1decoded,p2decoded[2],child1,parent1,eqchecker)
             child2 = updateFATypes(pos+1,p2decoded,p1decoded[2],child2,parent2,eqchecker)
 
+    # Pass 2 — Reload-batch crossover: recombine shuffling schemes for reload batches.
+    # Decode children AFTER Pass 1 to reflect any type changes made by updateFATypes.
+    decoded_c1 = [eqchecker.decodeFAID(int(child1[pos]), solnLen, numBatches) for pos in range(parent1.size)]
+    decoded_c2 = [eqchecker.decodeFAID(int(child2[pos]), solnLen, numBatches) for pos in range(parent1.size)]
+
+    # Build per-batch-level source demand counters from the current child state.
+    d1 = {}
+    d2 = {}
+    for pos in range(parent1.size):
+      if decoded_c1[pos][1] > 1:
+        key = (decoded_c1[pos][1], decoded_c1[pos][0])
+        d1[key] = d1.get(key, 0) + symMult[pos+1]
+      if decoded_c2[pos][1] > 1:
+        key = (decoded_c2[pos][1], decoded_c2[pos][0])
+        d2[key] = d2.get(key, 0) + symMult[pos+1]
+
+    for pos in range(parent1.size):
+      c1dec = decoded_c1[pos]
+      c2dec = decoded_c2[pos]
+      N = c1dec[1]
+      if N < 2 or N != c2dec[1]:
+        continue  # not a matching-batch reload position
+      if c1dec[2] != c2dec[2]:
+        continue  # mismatched fuel type; type-propagation path deferred to future work
+      if randomUtils.random(dim=1,samples=1) >= crossoverProb:
+        continue
+      src1, src2 = c1dec[0], c2dec[0]
+      if src1 == src2:
+        continue  # same source; swap is a no-op
+      myMult = symMult[pos+1]
+      T = c1dec[2]
+      # Verify that the proposed new source has the correct batch number and fuel type
+      # in each child (may differ from parent state after Pass 1 type propagation).
+      if decoded_c1[src2-1][1] != N-1 or decoded_c1[src2-1][2] != T:
+        continue  # src2 in child1 is batch-incompatible or type-incompatible
+      if decoded_c2[src1-1][1] != N-1 or decoded_c2[src1-1][2] != T:
+        continue  # src1 in child2 is batch-incompatible or type-incompatible
+      # Accept swap only if neither child over-demands the source's symmetry multiplicity.
+      if (d1.get((N, src2), 0) + myMult <= symMult[src2] and
+          d2.get((N, src1), 0) + myMult <= symMult[src1]):
+        child1[pos], child2[pos] = int(child2[pos]), int(child1[pos])
+        d1[(N, src1)] = d1.get((N, src1), 0) - myMult
+        d1[(N, src2)] = d1.get((N, src2), 0) + myMult
+        d2[(N, src2)] = d2.get((N, src2), 0) - myMult
+        d2[(N, src1)] = d2.get((N, src1), 0) + myMult
+
     #!NOTE(rollnk):this behavior of passing an eqchecker attribute into an eqchecker function is temporary until the EQ functions can be merged into the PRLO plugin.
-    flag = all((eqchecker.checkGenome(child1,eqchecker.prloData.symmetricMultiplicity)[0],
-                eqchecker.checkGenome(child2,eqchecker.prloData.symmetricMultiplicity)[0]))
+    flag = all((eqchecker.checkGenome(child1,symMult)[0],
+                eqchecker.checkGenome(child2,symMult)[0]))
     iter += 1
 
   return child1,child2
