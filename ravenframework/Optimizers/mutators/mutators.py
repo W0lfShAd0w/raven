@@ -68,6 +68,9 @@ def swapMutatorSS(offSprings, distDict, **kwargs):
     @ In, distDict, dict, dictionary containing distribution associated with each gene
     @ In, kwargs, dict, see swapMutatorEQ / swapMutatorSingleCycle for full parameter list.
     @ Out, children, xr.DataArray, the mutated chromosome, i.e., the child.
+
+    #!TODO(rollnk): Deprecated. Replaced by PRLO/src/Optimizers/mutators.py::swapMutatorSS.
+    #!              Remove this copy once the PRLO version is validated in production.
   """
   if not any("prlodata" in sublist for sublist in kwargs["files"]):
     raise ValueError("'swapMutatorSS' requires a File of type 'prlodata'.")
@@ -86,6 +89,9 @@ def swapMutatorEQ(offSprings, distDict, **kwargs):
     Two symmetry-equivalent gene locations are selected and swapped.  Two
     distinct swap modes are applied depending on whether the selected genes
     belong to the same batch or different batches:
+
+    #!TODO(rollnk): Deprecated. Replaced by PRLO/src/Optimizers/mutators.py::swapMutatorEQ.
+    #!              Remove this copy once the PRLO version is validated in production.
 
     Same-batch swap: exchanges the CDF-space values at loc1 and loc2, then
     updates the immediate downstream reload reference for each position.  This
@@ -214,6 +220,9 @@ def swapMutatorSingleCycle(offSprings, distDict, **kwargs):
           variables, list, variables names.
           files, list, list of input files (must include a prlodata file).
     @ Out, children, xr.DataArray, the mutated chromosome, i.e., the child.
+
+    #!TODO(rollnk): Deprecated. Replaced by PRLO/src/Optimizers/mutators.py::swapMutatorSingleCycle.
+    #!              Remove this copy once the PRLO version is validated in production.
   """
   if not any("prlodata" in sublist for sublist in kwargs["files"]):
     raise ValueError("'swapMutatorSingleCycle' requires a File of type 'prlodata'.")
@@ -396,6 +405,17 @@ __mutators['scrambleMutator']     = scrambleMutator
 __mutators['bitFlipMutator']      = bitFlipMutator
 __mutators['inversionMutator']    = inversionMutator
 __mutators['randomMutator']       = randomMutator
+
+
+def registerMutator(name, func):
+  """
+    Register a mutator function under the given name.  Plugins call this from
+    their __init__.py to make custom operators discoverable by the GA.
+    @ In, name, str, operator name as it will appear in RAVEN XML input.
+    @ In, func, callable, mutator function with signature func(offSprings, distDict, **kwargs).
+    @ Out, None
+  """
+  __mutators[name] = func
 
 
 def returnInstance(cls, name):

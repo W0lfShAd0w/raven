@@ -28,7 +28,7 @@ from scipy.special import comb
 from itertools import combinations
 import xarray as xr
 from ...utils import randomUtils
-from ...utils.SSChecker import EQChecker, SingleCycleChecker
+from ...utils.SSChecker import EQChecker, SingleCycleChecker #!TODO(rollnk): Remove this once the PRLO version is validated in production.
 
 
 # @profile
@@ -81,7 +81,11 @@ def onePointCrossover(parents,**kwargs):
 
 def uniformCrossover(parents,**kwargs):
   """
-    Method designed to perform crossover by swapping genes one by one
+    Method designed to perform crossover by swapping genes one by one.
+    For PRLO EQ/SC shuffling-scheme problems, register PRLO's uniformCrossover via
+    registerCrossover() (done in PRLO/__init__.py) to replace this entry with a
+    dispatcher that handles the prlodata file.  This fallback performs plain uniform
+    crossover for non-PRLO problems.
     @ In, parents, xr.DataArray, parents involved in the mating process.
     @ In, kwargs, dict, dictionary of parameters for this mutation method:
           parents, 2D array, parents in the current mating process.
@@ -99,6 +103,7 @@ def uniformCrossover(parents,**kwargs):
   else:
     crossoverProb = kwargs['crossoverProb']
 
+##!TODO(rollnk): Remove this once the PRLO version is validated in production.
   # check for EQ or single-cycle (Nth cycle) input
   EQFlag = False
   SCFlag = False
@@ -110,17 +115,20 @@ def uniformCrossover(parents,**kwargs):
     SCFlag = effectiveType in ["single_cycle","single_uprate"] and EQObject.prloData.numBatches > 1
   if SCFlag:
     SCObject = SingleCycleChecker(inpfile.getPath()+inpfile.getFilename())
+##! End deprecated section
 
   index = 0
   parentsPairs = list(combinations(parents,2))
   for parentPair in parentsPairs:
     parent1 = parentPair[0].values
     parent2 = parentPair[1].values
+##!TODO(rollnk): Remove this once the PRLO version is validated in production.
     if EQFlag:
       children1,children2 = uniformEQCrossoverMethod(parent1,parent2,crossoverProb,EQObject)
     elif SCFlag:
       children1,children2 = uniformSCCrossoverMethod(parent1,parent2,crossoverProb,SCObject)
     else:
+##! End deprecated section (next line gets untabbed)
       children1,children2 = uniformCrossoverMethod(parent1,parent2,crossoverProb)
     children[index]   = children1
     children[index+1] = children2
@@ -176,7 +184,17 @@ __crossovers = {}
 __crossovers['onePointCrossover']  = onePointCrossover
 __crossovers['twoPointsCrossover'] = twoPointsCrossover
 __crossovers['uniformCrossover']   = uniformCrossover
-#!__crossovers['EQCrossover']         = EQCrossover #!TODO(rollnk):deprecated; remove.
+
+
+def registerCrossover(name, func):
+  """
+    Register a crossover operator function under the given name.  Plugins call
+    this from their __init__.py to make custom operators discoverable by the GA.
+    @ In, name, str, operator name as it will appear in RAVEN XML input.
+    @ In, func, callable, crossover function with signature func(parents, **kwargs).
+    @ Out, None
+  """
+  __crossovers[name] = func
 
 
 def returnInstance(cls, name):
@@ -247,6 +265,9 @@ def uniformEQCrossoverMethod(parent1,parent2,crossoverProb,eqchecker):
     @ In, eqchecker: utils.EQChecker object
     @ Out, child1: first generated array
     @ Out, child2: second generated array
+
+    #!TODO(rollnk): Deprecated. Replaced by PRLO/src/Optimizers/crossovers.py::uniformEQCrossoverMethod.
+    #!              Remove this copy once the PRLO version is validated in production.
   """
   maxiter = 1000; iter = 0
   flag = False
@@ -280,6 +301,9 @@ def updateFATypes(sourceLoc,sourceDecoded,faType,child,parent,eqobj):
   """
     Utility for the uniformEQCrossoverMethod. If a crossover operation results in a different FA type
     at a given location, all associated reloaded FA's must also have their FA types updated.
+
+    #!TODO(rollnk): Deprecated. Replaced by PRLO/src/Optimizers/crossovers.py::updateFATypes.
+    #!              Remove this copy once the PRLO version is validated in production.
   """
   sourceLocsList = [(sourceLoc,sourceDecoded[1]+1)] # position, batch number
   antihang = 0
@@ -318,6 +342,9 @@ def uniformSCCrossoverMethod(parent1,parent2,crossoverProb,scchecker):
     @ In, scchecker, SingleCycleChecker, logical constraint handler for single-cycle cases.
     @ Out, child1, numpy.array, first generated child chromosome
     @ Out, child2, numpy.array, second generated child chromosome
+
+    #!TODO(rollnk): Deprecated. Replaced by PRLO/src/Optimizers/crossovers.py::uniformSCCrossoverMethod.
+    #!              Remove this copy once the PRLO version is validated in production.
   """
   solnLen   = scchecker.prloData.solnLen
   numBatches= scchecker.prloData.numBatches
