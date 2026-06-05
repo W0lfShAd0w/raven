@@ -17,6 +17,9 @@ import numpy as np
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
+##!TODO(rollnk): This entire file is a reproduction of the equivalent in the PRLO plugin.
+##!              This file is now deprecated and will soon be deleted.
+
 
 class _PRLOCheckerBase():
   """
