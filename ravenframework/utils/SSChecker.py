@@ -17,6 +17,9 @@ import numpy as np
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
+##!TODO(rollnk): This entire file is a reproduction of the equivalent in the PRLO plugin.
+##!              This file is now deprecated and will soon be deleted.
+
 
 class _PRLOCheckerBase():
   """
@@ -41,7 +44,23 @@ class _PRLOCheckerBase():
 
       if verbosity in ['calcType','full','reduced']:
         self.calculationType     = '_'.join(self.parseXMLInput(root,'calculationType',default="single_cycle").lower().split())
+        _p53dNode                = root.find("PARCSR53DSettings")
+        _p53dRoot                = _p53dNode if _p53dNode is not None else root
+        _phase1Raw               = self.parseXMLInput(_p53dRoot,'phase1CalcType',default=None)
+        self.phase1CalcType      = '_'.join(_phase1Raw.lower().split()) if _phase1Raw else None
       if verbosity in ['full','reduced']:
+        # unstructured_opt calcs may have no LWR assembly geometry;
+        # skip the blocks below to avoid AttributeError on tags with no default.
+        if self.calculationType == 'unstructured_opt':
+          self.numBatches = 1
+          self.feedBatchSizeLimits = None
+          self.colLabels = self.rowLabels = self.geometry = None
+          self.faDict = self.fuelFADict = []
+          self.numTypes = self.solnLen = self.numAssemblies = 0
+          self.wabaTypes = set()
+          self.crBankLocSet = set()
+          return
+
         self.numBatches          = self.parseXMLInput(root,'numBatches',datatype=int,default=1)
         self.feedBatchSizeLimits = self.parseXMLInput(root,'feedBatchSizeLimits',default=None)
         self.colLabels           = self.parseXMLInput(root,'colLabels')
@@ -57,7 +76,11 @@ class _PRLOCheckerBase():
         self.faDict = []
         for fa in root.iter('FA'):
           self.faDict.append(fa.attrib)
-        self.numTypes = len([fa for fa in self.faDict if fa['type'] == 'fuel'])
+        self.fuelFADict = [fa for fa in self.faDict if fa['type'] == 'fuel']
+        self.numTypes = len(self.fuelFADict)
+        self.wabaTypes = {i + 1 for i, fa in enumerate(self.fuelFADict)
+                          if fa.get('waba', 'false').lower() in ['true', '1', 'yes', 't', 'y']}
+        self.crBank = self.parseXMLInput(root, 'crBank', default=None)
         self.xsDict =[]
         for xs in root.iter('XS'):
           self.xsDict.append(xs.attrib)
@@ -72,6 +95,19 @@ class _PRLOCheckerBase():
             self.feedBatchSizeLimits = (np.ceil(self.numAssemblies/self.numBatches),self.feedBatchSizeLimits[0])
           else:
             self.feedBatchSizeLimits = (self.feedBatchSizeLimits[0],self.feedBatchSizeLimits[-1]) #ensure only two values are provided.
+
+        # Resolve CR bank location set from crBank token string (parallel to geometry)
+        crBankLocSet = set()
+        if getattr(self, 'crBank', None) is not None:
+          crBankTokens = self.crBank.strip().split()
+          geom = self.geometry.strip().split()
+          for geomToken, crToken in zip(geom, crBankTokens):
+            if str(geomToken).isdigit() and int(geomToken) != 0 and int(crToken) == 1:
+              crBankLocSet.add(int(geomToken))
+        self.crBankLocSet = crBankLocSet
+
+        if getattr(self, 'wabaTypes', set()) and not crBankLocSet:
+          print("WARNING: WABA FA types are defined but no <crBank> was provided. WABA assemblies will not be excluded from any location.")
 
       if verbosity in ['full']:
         self.useTemplate     = self.strToBool(self.parseXMLInput(root,'useTemplate',default="False"))
@@ -184,6 +220,10 @@ class EQChecker(_PRLOCheckerBase):
       @ Out, bool, False if any check is violated; True otherwise.
       @ Out, int, Error code to indicate what caused the failure.
     """
+  ## Assert: genome length matches desired solution length
+    if len(genome) != self.prloData.solnLen:
+      return False, 7
+
     decodedGenomeWithMult = [(self.decodeFAID(genome[l],self.prloData.solnLen,self.prloData.numBatches),symMult[l+1]) for l in range(len(genome))]
     zoneMap = [l[0][1] for l in decodedGenomeWithMult]
 
@@ -237,6 +277,12 @@ class EQChecker(_PRLOCheckerBase):
         if batchNum == 1 and typeNum in wabaTypes and (i + 1) in crBankLocSet:
           return False, 6
 
+  ## Assert: all FAID values are valid
+    maxFAID = self.prloData.solnLen * self.prloData.numBatches * self.prloData.numTypes - 1
+    for gene in genome:
+      if gene > maxFAID:
+        return False, 8
+
     return True, 0
 
 
@@ -273,11 +319,11 @@ class SingleCycleChecker(_PRLOCheckerBase):
       raise ValueError("SingleCycleChecker requires 'reloadGeometry' be provided in the PRLO data input.")
 
     reloadTokens = self.prloData.reloadGeometry.strip().split()
-    geometryTokens = self.prloData.geometry.strip().split()
+    geometryTokens = self.prloData.geometry if isinstance(self.prloData.geometry, list) else self.prloData.geometry.strip().split()
     if len(reloadTokens) != len(geometryTokens):
       raise ValueError("reloadGeometry must contain the same number of entries as geometry.")
 
-    fuelLabelMap = {fa['label']: i + 1 for i, fa in enumerate(self.prloData.faDict) if fa['type'].lower() == 'fuel'}
+    fuelLabelMap = {fa['label']: i + 1 for i, fa in enumerate(self.prloData.fuelFADict)}
     reloadMapDict = {}
     for geomToken, reloadToken in zip(geometryTokens, reloadTokens):
       if not str(geomToken).isdigit() or int(geomToken) == 0:
@@ -347,5 +393,11 @@ class SingleCycleChecker(_PRLOCheckerBase):
         _, batchNum, typeNum = self.decodeFAID(int(gene), self.prloData.solnLen, self.prloData.numBatches)
         if batchNum == 1 and typeNum in wabaTypes and (i + 1) in crBankLocSet:
           return False, 9
+
+  ## Assert: all FAID values are valid
+    maxFAID = self.prloData.solnLen * self.prloData.numBatches * self.prloData.numTypes - 1
+    for gene in genome:
+      if gene > maxFAID:
+        return False, 10
 
     return True, 0

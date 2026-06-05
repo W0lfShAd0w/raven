@@ -28,7 +28,7 @@ from scipy.special import comb
 from itertools import combinations
 import xarray as xr
 from ...utils import randomUtils
-from ...utils.SSChecker import EQChecker, SingleCycleChecker
+from ...utils.SSChecker import EQChecker, SingleCycleChecker #!TODO(rollnk): Remove this once the PRLO version is validated in production.
 
 
 # @profile
@@ -81,7 +81,11 @@ def onePointCrossover(parents,**kwargs):
 
 def uniformCrossover(parents,**kwargs):
   """
-    Method designed to perform crossover by swapping genes one by one
+    Method designed to perform crossover by swapping genes one by one.
+    For PRLO EQ/SC shuffling-scheme problems, register PRLO's uniformCrossover via
+    registerCrossover() (done in PRLO/__init__.py) to replace this entry with a
+    dispatcher that handles the prlodata file.  This fallback performs plain uniform
+    crossover for non-PRLO problems.
     @ In, parents, xr.DataArray, parents involved in the mating process.
     @ In, kwargs, dict, dictionary of parameters for this mutation method:
           parents, 2D array, parents in the current mating process.
@@ -99,27 +103,32 @@ def uniformCrossover(parents,**kwargs):
   else:
     crossoverProb = kwargs['crossoverProb']
 
+##!TODO(rollnk): Remove this once the PRLO version is validated in production.
   # check for EQ or single-cycle (Nth cycle) input
   EQFlag = False
   SCFlag = False
   if any("prlodata" in sublist for sublist in kwargs["files"]):
     inpfile = [sublist[-1] for sublist in kwargs["files"] if sublist[1]=='prlodata'][0]
     EQObject = EQChecker(inpfile.getPath()+inpfile.getFilename())
-    EQFlag = EQObject.prloData.calculationType in ["eq_cycle","eq_uprate"]
-    SCFlag = EQObject.prloData.calculationType in ["single_cycle","single_uprate"] and EQObject.prloData.numBatches > 1
+    effectiveType = EQObject.prloData.phase1CalcType if EQObject.prloData.calculationType == "coupled_transient" else EQObject.prloData.calculationType
+    EQFlag = effectiveType in ["eq_cycle","eq_uprate"]
+    SCFlag = effectiveType in ["single_cycle","single_uprate"] and EQObject.prloData.numBatches > 1
   if SCFlag:
     SCObject = SingleCycleChecker(inpfile.getPath()+inpfile.getFilename())
+##! End deprecated section
 
   index = 0
   parentsPairs = list(combinations(parents,2))
   for parentPair in parentsPairs:
     parent1 = parentPair[0].values
     parent2 = parentPair[1].values
+##!TODO(rollnk): Remove this once the PRLO version is validated in production.
     if EQFlag:
       children1,children2 = uniformEQCrossoverMethod(parent1,parent2,crossoverProb,EQObject)
     elif SCFlag:
       children1,children2 = uniformSCCrossoverMethod(parent1,parent2,crossoverProb,SCObject)
     else:
+##! End deprecated section (next line gets untabbed)
       children1,children2 = uniformCrossoverMethod(parent1,parent2,crossoverProb)
     children[index]   = children1
     children[index+1] = children2
@@ -175,7 +184,17 @@ __crossovers = {}
 __crossovers['onePointCrossover']  = onePointCrossover
 __crossovers['twoPointsCrossover'] = twoPointsCrossover
 __crossovers['uniformCrossover']   = uniformCrossover
-#!__crossovers['EQCrossover']         = EQCrossover #!TODO(rollnk):deprecated; remove.
+
+
+def registerCrossover(name, func):
+  """
+    Register a crossover operator function under the given name.  Plugins call
+    this from their __init__.py to make custom operators discoverable by the GA.
+    @ In, name, str, operator name as it will appear in RAVEN XML input.
+    @ In, func, callable, crossover function with signature func(parents, **kwargs).
+    @ Out, None
+  """
+  __crossovers[name] = func
 
 
 def returnInstance(cls, name):
@@ -239,14 +258,50 @@ def uniformCrossoverMethod(parent1,parent2,crossoverProb):
 
 def uniformEQCrossoverMethod(parent1,parent2,crossoverProb,eqchecker):
   """
-    Method designed to perform a uniform crossover on 2 arrays
-    @ In, parent1: first array
-    @ In, parent2: second array
-    @ In, crossoverProb: crossover probability for each gene
-    @ In, eqchecker: utils.EQChecker object
-    @ Out, child1: first generated array
-    @ Out, child2: second generated array
+    Uniform crossover for equilibrium-cycle (EQ) PRLO shuffling schemes.
+    Two crossover passes are performed within each retry iteration:
+
+    Pass 1 — Fresh-batch (batch-1) crossover: positions where both parents carry
+    a batch-1 gene are eligible for fuel-type exchange.  When types differ,
+    updateFATypes propagates the change through the downstream reload chain.
+    This preserves the ILB behaviour for the fresh batch.
+
+    Pass 2 — Reload-batch crossover: positions where both children (after Pass 1)
+    carry the same batch number N > 1 AND the same fuel type are eligible for
+    source-location exchange.  This recombines the shuffling scheme — which
+    batch-(N-1) source feeds each batch-N destination — between the two parents.
+    A per-batch-level demand check prevents over-demanding any source location
+    beyond its symmetry multiplicity.  Positions where the proposed source is
+    type-incompatible in the receiving child are skipped; these are conservatively
+    deferred rather than producing a genome that fails checkGenome.
+
+    NOTE — when Pass 2 fires: Pass 2 swaps are accepted only when the proposed
+    new source has spare capacity (demand < symMult).  For standard equal-batch
+    EQ cores where every batch-(N-1) source is already fully demanded by batch-N
+    positions, Pass 2 makes no changes.  Pass 2 fires when batch sizes are
+    unequal (fewer batch-N assemblies than batch-(N-1)) or when lower-multiplicity
+    batch-N positions source from higher-multiplicity batch-(N-1) positions,
+    leaving residual capacity at the source.
+
+    Both passes use the same crossoverProb gate.  The existing checkGenome + retry
+    loop provides final validation; the demand and type checks in Pass 2 reduce
+    the rejection rate significantly.
+
+    @ In, parent1, numpy.array, first parent chromosome
+    @ In, parent2, numpy.array, second parent chromosome
+    @ In, crossoverProb, float, per-gene crossover probability
+    @ In, eqchecker, EQChecker, logical constraint handler for EQ-cycle cases
+    @ Out, child1, numpy.array, first generated child chromosome
+    @ Out, child2, numpy.array, second generated child chromosome
+
+    #!TODO(rollnk): Deprecated. Replaced by PRLO/src/Optimizers/crossovers.py::uniformEQCrossoverMethod.
+    #!              Remove this copy once the PRLO version is validated in production. First doublecheck
+    #!              that the PRLO version is fully up-to-date with changes in this version.
   """
+  solnLen   = eqchecker.prloData.solnLen
+  numBatches = eqchecker.prloData.numBatches
+  symMult   = eqchecker.prloData.symmetricMultiplicity
+
   maxiter = 1000; iter = 0
   flag = False
   while not flag:
@@ -255,22 +310,70 @@ def uniformEQCrossoverMethod(parent1,parent2,crossoverProb,eqchecker):
 
     child1 = deepcopy(parent1)
     child2 = deepcopy(parent2)
+
+    # Pass 1 — Fresh-batch crossover (ILB behaviour preserved).
     for pos in range(parent1.size):
       #!NOTE(rollnk):this behavior of passing an eqchecker attribute into an eqchecker function is temporary until the EQ functions can be merged into the PRLO plugin.
-      p1decoded = eqchecker.decodeFAID(parent1[pos], eqchecker.prloData.solnLen, eqchecker.prloData.numBatches)
-      p2decoded = eqchecker.decodeFAID(parent2[pos], eqchecker.prloData.solnLen, eqchecker.prloData.numBatches)
-      #!TODO(rollnk):This is similar to the ILB method except the reloaded batches aren't randomized; they just receive updated FA types. ONLY FEED BATCH UNDERGOES CROSSOVER.
-      if p1decoded[1] == p2decoded[1] == 1: # only crossover if batch numbers are the same. This comes from the ILB method.
+      p1decoded = eqchecker.decodeFAID(parent1[pos], solnLen, numBatches)
+      p2decoded = eqchecker.decodeFAID(parent2[pos], solnLen, numBatches)
+      if p1decoded[1] == p2decoded[1] == 1: # only crossover if batch numbers match at batch-1.
         if randomUtils.random(dim=1,samples=1)<crossoverProb:
           child1[pos] = parent2[pos]
           child2[pos] = parent1[pos]
-          if p1decoded[2] != p2decoded[2]: # FA types don't match; check for reloads and update those FAtypes as well.
+          if p1decoded[2] != p2decoded[2]: # FA types don't match; propagate type change to reload chain.
+            #!NOTE(rollnk):this behavior of passing an eqchecker attribute into an eqchecker function is temporary until the EQ functions can be merged into the PRLO plugin.
             child1 = updateFATypes(pos+1,p1decoded,p2decoded[2],child1,parent1,eqchecker)
             child2 = updateFATypes(pos+1,p2decoded,p1decoded[2],child2,parent2,eqchecker)
 
+    # Pass 2 — Reload-batch crossover: recombine shuffling schemes for reload batches.
+    # Decode children AFTER Pass 1 to reflect any type changes made by updateFATypes.
+    decoded_c1 = [eqchecker.decodeFAID(int(child1[pos]), solnLen, numBatches) for pos in range(parent1.size)]
+    decoded_c2 = [eqchecker.decodeFAID(int(child2[pos]), solnLen, numBatches) for pos in range(parent1.size)]
+
+    # Build per-batch-level source demand counters from the current child state.
+    d1 = {}
+    d2 = {}
+    for pos in range(parent1.size):
+      if decoded_c1[pos][1] > 1:
+        key = (decoded_c1[pos][1], decoded_c1[pos][0])
+        d1[key] = d1.get(key, 0) + symMult[pos+1]
+      if decoded_c2[pos][1] > 1:
+        key = (decoded_c2[pos][1], decoded_c2[pos][0])
+        d2[key] = d2.get(key, 0) + symMult[pos+1]
+
+    for pos in range(parent1.size):
+      c1dec = decoded_c1[pos]
+      c2dec = decoded_c2[pos]
+      N = c1dec[1]
+      if N < 2 or N != c2dec[1]:
+        continue  # not a matching-batch reload position
+      if c1dec[2] != c2dec[2]:
+        continue  # mismatched fuel type; type-propagation path deferred to future work
+      if randomUtils.random(dim=1,samples=1) >= crossoverProb:
+        continue
+      src1, src2 = c1dec[0], c2dec[0]
+      if src1 == src2:
+        continue  # same source; swap is a no-op
+      myMult = symMult[pos+1]
+      T = c1dec[2]
+      # Verify that the proposed new source has the correct batch number and fuel type
+      # in each child (may differ from parent state after Pass 1 type propagation).
+      if decoded_c1[src2-1][1] != N-1 or decoded_c1[src2-1][2] != T:
+        continue  # src2 in child1 is batch-incompatible or type-incompatible
+      if decoded_c2[src1-1][1] != N-1 or decoded_c2[src1-1][2] != T:
+        continue  # src1 in child2 is batch-incompatible or type-incompatible
+      # Accept swap only if neither child over-demands the source's symmetry multiplicity.
+      if (d1.get((N, src2), 0) + myMult <= symMult[src2] and
+          d2.get((N, src1), 0) + myMult <= symMult[src1]):
+        child1[pos], child2[pos] = int(child2[pos]), int(child1[pos])
+        d1[(N, src1)] = d1.get((N, src1), 0) - myMult
+        d1[(N, src2)] = d1.get((N, src2), 0) + myMult
+        d2[(N, src2)] = d2.get((N, src2), 0) - myMult
+        d2[(N, src1)] = d2.get((N, src1), 0) + myMult
+
     #!NOTE(rollnk):this behavior of passing an eqchecker attribute into an eqchecker function is temporary until the EQ functions can be merged into the PRLO plugin.
-    flag = all((eqchecker.checkGenome(child1,eqchecker.prloData.symmetricMultiplicity)[0],
-                eqchecker.checkGenome(child2,eqchecker.prloData.symmetricMultiplicity)[0]))
+    flag = all((eqchecker.checkGenome(child1,symMult)[0],
+                eqchecker.checkGenome(child2,symMult)[0]))
     iter += 1
 
   return child1,child2
@@ -279,6 +382,9 @@ def updateFATypes(sourceLoc,sourceDecoded,faType,child,parent,eqobj):
   """
     Utility for the uniformEQCrossoverMethod. If a crossover operation results in a different FA type
     at a given location, all associated reloaded FA's must also have their FA types updated.
+
+    #!TODO(rollnk): Deprecated. Replaced by PRLO/src/Optimizers/crossovers.py::updateFATypes.
+    #!              Remove this copy once the PRLO version is validated in production.
   """
   sourceLocsList = [(sourceLoc,sourceDecoded[1]+1)] # position, batch number
   antihang = 0
@@ -317,6 +423,9 @@ def uniformSCCrossoverMethod(parent1,parent2,crossoverProb,scchecker):
     @ In, scchecker, SingleCycleChecker, logical constraint handler for single-cycle cases.
     @ Out, child1, numpy.array, first generated child chromosome
     @ Out, child2, numpy.array, second generated child chromosome
+
+    #!TODO(rollnk): Deprecated. Replaced by PRLO/src/Optimizers/crossovers.py::uniformSCCrossoverMethod.
+    #!              Remove this copy once the PRLO version is validated in production.
   """
   solnLen   = scchecker.prloData.solnLen
   numBatches= scchecker.prloData.numBatches
