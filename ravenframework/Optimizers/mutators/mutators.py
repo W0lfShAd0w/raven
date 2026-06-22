@@ -23,6 +23,7 @@
   Created June,16,2020
   @authors: Mohammad Abdo, Diego Mandelli, Andrea Alfonsi, Junyung Kim
 """
+import os
 import numpy as np
 import xarray as xr
 from operator import itemgetter
@@ -75,7 +76,7 @@ def swapMutatorSS(offSprings, distDict, **kwargs):
   if not any("prlodata" in sublist for sublist in kwargs["files"]):
     raise ValueError("'swapMutatorSS' requires a File of type 'prlodata'.")
   inpfile = [sublist[-1] for sublist in kwargs["files"] if sublist[1]=='prlodata'][0]
-  prloData = EQChecker.PRLODataParser(inpfile.getPath()+inpfile.getFilename(), verbosity='reduced')
+  prloData = EQChecker.PRLODataParser(os.path.normpath(os.path.join(inpfile.getPath(), inpfile.getFilename())), verbosity='reduced')
   effectiveType = prloData.phase1CalcType if prloData.calculationType == "coupled_transient" else prloData.calculationType
   if effectiveType in ["eq_cycle","eq_uprate"]:
     return swapMutatorEQ(offSprings, distDict, **kwargs)
@@ -106,7 +107,7 @@ def swapMutatorEQ(offSprings, distDict, **kwargs):
     updated so that the reload chain remains consistent.  This allows the GA to
     explore different zoning map configurations during EQ optimisation runs.
 
-    In both modes the result is validated by checkGenome and retried if invalid.
+    In both modes the result is validated by checkChromosome and retried if invalid.
 
     @ In, offSprings, xr.DataArray, children resulting from the crossover process
     @ In, distDict, dict, dictionary of distributions associated with each gene
@@ -122,7 +123,7 @@ def swapMutatorEQ(offSprings, distDict, **kwargs):
   EQFlag = False
   if any("prlodata" in sublist for sublist in kwargs["files"]):
     inpfile = [sublist[-1] for sublist in kwargs["files"] if sublist[1]=='prlodata'][0]
-    EQObject = EQChecker(inpfile.getPath()+inpfile.getFilename())
+    EQObject = EQChecker(os.path.normpath(os.path.join(inpfile.getPath(), inpfile.getFilename())))
     symMult = EQObject.prloData.symmetricMultiplicity
     effectiveType = EQObject.prloData.phase1CalcType if EQObject.prloData.calculationType == "coupled_transient" else EQObject.prloData.calculationType
     EQFlag = effectiveType in ["eq_cycle","eq_uprate"]
@@ -202,7 +203,7 @@ def swapMutatorEQ(offSprings, distDict, **kwargs):
               if children[i,pos] == oldReload:
                 children[i,pos] = newReload
 
-      flag = EQObject.checkGenome(children[i],symMult)[0]
+      flag = EQObject.checkChromosome(children[i],symMult)[0]
 
   return children
 
@@ -227,7 +228,7 @@ def swapMutatorSingleCycle(offSprings, distDict, **kwargs):
   if not any("prlodata" in sublist for sublist in kwargs["files"]):
     raise ValueError("'swapMutatorSingleCycle' requires a File of type 'prlodata'.")
   inpfile = [sublist[-1] for sublist in kwargs["files"] if sublist[1]=='prlodata'][0]
-  SCObject = SingleCycleChecker(inpfile.getPath()+inpfile.getFilename())
+  SCObject = SingleCycleChecker(os.path.normpath(os.path.join(inpfile.getPath(), inpfile.getFilename())))
   symMult = SCObject.prloData.symmetricMultiplicity
 
   children = xr.DataArray(np.zeros((np.shape(offSprings))),
@@ -257,7 +258,7 @@ def swapMutatorSingleCycle(offSprings, distDict, **kwargs):
         children[i,loc1] = SCObject.encodeFAID((loc1+1,1,t2),SCObject.prloData.solnLen,SCObject.prloData.numBatches) if b2==1 else gene2
         children[i,loc2] = SCObject.encodeFAID((loc2+1,1,t1),SCObject.prloData.solnLen,SCObject.prloData.numBatches) if b1==1 else gene1
 
-      flag = SCObject.checkGenome(children[i],symMult)[0]
+      flag = SCObject.checkChromosome(children[i],symMult)[0]
 
   return children
 

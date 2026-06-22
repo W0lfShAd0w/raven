@@ -211,7 +211,7 @@ class EQChecker(_PRLOCheckerBase):
     self.prloData = self.PRLODataParser(prloDataInputFile)
 
   ## function for shuffling scheme logic
-  def checkGenome(self,genome,symMult):
+  def checkChromosome(self,genome,symMult):
     """
       Validate if the shuffling scheme represented by "genome" and "symMult" correspond to
       a valid equilibrium cycle shuffling scheme.
@@ -342,7 +342,7 @@ class SingleCycleChecker(_PRLOCheckerBase):
 
     return {'mode': 'fixedType', 'values': [reloadMapDict[loc] for loc in range(1, self.prloData.solnLen + 1)]}
 
-  def checkGenome(self, genome, symMult):
+  def checkChromosome(self, genome, symMult):
     """
       Validate the direct single-cycle FAID interpretation.
       Fresh fuel genes must resolve to their own destination location, while reload genes
