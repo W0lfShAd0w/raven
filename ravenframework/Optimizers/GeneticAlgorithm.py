@@ -262,7 +262,9 @@ from ..utils.gaUtils import dataArrayToDict, datasetToDataArray
 from .RavenSampled import RavenSampled
 from .parentSelectors.parentSelectors import returnInstance as parentSelectionReturnInstance
 from .crossOverOperators.crossovers import returnInstance as crossoversReturnInstance
+from .crossOverOperators.crossovers import __crossovers as crossoversList # Fetch updated list of crossover operators
 from .mutators.mutators import returnInstance as mutatorsReturnInstance
+from .mutators.mutators import __mutators as mutatorsList # Fetch updated list of mutator operators
 from .survivorSelectors.survivorSelectors import returnInstance as survivorSelectionReturnInstance
 from .survivorSelection import survivorSelection as survivorSelectionProcess
 from .constraintHandling.constraintHandling import constraintHandling
@@ -462,7 +464,7 @@ class GeneticAlgorithm(RavenSampled):
                     \item \textit{uniformCrossover} - It randomly selects genes from two parent chromosomes with equal probability, creating offspring by exchanging genes at corresponding positions.
                   \end{itemize}""")
     crossover.addParam("type",
-                       InputTypes.makeEnumType('crossover','crossoverType',['onePointCrossover','twoPointsCrossover','uniformCrossover','EQCrossover']),
+                       InputTypes.makeEnumType('crossover','crossoverType',crossoversList),
                        True,
                        descr="type of crossover operation to be used. See the list of options above.")
     crossoverPoint = InputData.parameterInputFactory('points', strictMode=True,
@@ -491,7 +493,7 @@ class GeneticAlgorithm(RavenSampled):
                   \item \textit{randomMutator} - It randomly selects a gene within an chromosome and mutates the gene.
                 \end{itemize} """)
     mutation.addParam("type",
-                      InputTypes.makeEnumType('mutation','mutationType',['swapMutator','scrambleMutator','inversionMutator','randomMutator','swapMutatorSS']),
+                      InputTypes.makeEnumType('mutation','mutationType',mutatorsList),
                       True,
                       descr="type of mutation operation to be used. See the list of options above.")
     mutationLocs = InputData.parameterInputFactory('locs', strictMode=True,
