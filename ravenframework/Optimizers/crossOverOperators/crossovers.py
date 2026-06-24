@@ -22,6 +22,7 @@
   @authors: Mohammad Abdo, Diego Mandelli, Andrea Alfonsi
 """
 
+import os
 import numpy as np
 from copy import deepcopy
 from scipy.special import comb
@@ -109,12 +110,12 @@ def uniformCrossover(parents,**kwargs):
   SCFlag = False
   if any("prlodata" in sublist for sublist in kwargs["files"]):
     inpfile = [sublist[-1] for sublist in kwargs["files"] if sublist[1]=='prlodata'][0]
-    EQObject = EQChecker(inpfile.getPath()+inpfile.getFilename())
+    EQObject = EQChecker(os.path.normpath(os.path.join(inpfile.getPath(), inpfile.getFilename())))
     effectiveType = EQObject.prloData.phase1CalcType if EQObject.prloData.calculationType == "coupled_transient" else EQObject.prloData.calculationType
     EQFlag = effectiveType in ["eq_cycle","eq_uprate"]
     SCFlag = effectiveType in ["single_cycle","single_uprate"] and EQObject.prloData.numBatches > 1
   if SCFlag:
-    SCObject = SingleCycleChecker(inpfile.getPath()+inpfile.getFilename())
+    SCObject = SingleCycleChecker(os.path.normpath(os.path.join(inpfile.getPath(), inpfile.getFilename())))
 ##! End deprecated section
 
   index = 0
@@ -273,7 +274,7 @@ def uniformEQCrossoverMethod(parent1,parent2,crossoverProb,eqchecker):
     A per-batch-level demand check prevents over-demanding any source location
     beyond its symmetry multiplicity.  Positions where the proposed source is
     type-incompatible in the receiving child are skipped; these are conservatively
-    deferred rather than producing a genome that fails checkGenome.
+    deferred rather than producing a genome that fails checkChromosome.
 
     NOTE — when Pass 2 fires: Pass 2 swaps are accepted only when the proposed
     new source has spare capacity (demand < symMult).  For standard equal-batch
@@ -283,7 +284,7 @@ def uniformEQCrossoverMethod(parent1,parent2,crossoverProb,eqchecker):
     batch-N positions source from higher-multiplicity batch-(N-1) positions,
     leaving residual capacity at the source.
 
-    Both passes use the same crossoverProb gate.  The existing checkGenome + retry
+    Both passes use the same crossoverProb gate.  The existing checkChromosome + retry
     loop provides final validation; the demand and type checks in Pass 2 reduce
     the rejection rate significantly.
 
@@ -372,8 +373,8 @@ def uniformEQCrossoverMethod(parent1,parent2,crossoverProb,eqchecker):
         d2[(N, src1)] = d2.get((N, src1), 0) + myMult
 
     #!NOTE(rollnk):this behavior of passing an eqchecker attribute into an eqchecker function is temporary until the EQ functions can be merged into the PRLO plugin.
-    flag = all((eqchecker.checkGenome(child1,symMult)[0],
-                eqchecker.checkGenome(child2,symMult)[0]))
+    flag = all((eqchecker.checkChromosome(child1,symMult)[0],
+                eqchecker.checkChromosome(child2,symMult)[0]))
     iter += 1
 
   return child1,child2
@@ -476,8 +477,8 @@ def uniformSCCrossoverMethod(parent1,parent2,crossoverProb,scchecker):
         d1[sl1] -= myMult;  d1[sl2] += myMult
         d2[sl2] -= myMult;  d2[sl1] += myMult
 
-  if not all((scchecker.checkGenome(child1,symMult)[0],
-              scchecker.checkGenome(child2,symMult)[0])):
+  if not all((scchecker.checkChromosome(child1,symMult)[0],
+              scchecker.checkChromosome(child2,symMult)[0])):
     raise ValueError("uniformSCCrossoverMethod produced an invalid genome; this is a bug.")
 
   return child1,child2
