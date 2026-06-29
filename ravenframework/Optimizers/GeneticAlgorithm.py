@@ -250,7 +250,6 @@
 # External Modules----------------------------------------------------------------------------------
 from collections import deque, defaultdict
 import numpy as np
-from copy import deepcopy
 from scipy.special import comb
 import xarray as xr
 from copy import deepcopy
@@ -338,6 +337,7 @@ class GeneticAlgorithm(RavenSampled):
     self.multiBestConstraint = {}                                # constraint values of the best solutions found
     self.multiBestRank = {}                                      # rank values of the best solutions found
     self.multiBestCD = {}                                        # crowding distance (CD) values of the best solutions found
+    self.objectiveVal = None                                     # objective values of solutions
     self._populationSize = None                                  # number of population size
     self._parentSelectionType = None                             # type of the parent selection process chosen
     self._parentSelectionInstance = None                         # instance of the parent selection process chosen
@@ -568,11 +568,6 @@ class GeneticAlgorithm(RavenSampled):
         printPriority=108,
         descr=r""" shift: in case of logistic fitness, this is the shift in the exponential function for the onjective(s). \default{list of zeros}""")
     fitness.addSub(shift)
-    normalizeFitness = InputData.parameterInputFactory('normalize', strictMode=False,
-        contentType=InputTypes.StringType,
-        printPriority=108,
-        descr=r""" normalize: input and output data will be normalized prior to calculating fitness for each iteration of the optimizer. \default{zscore}""")
-    fitness.addSub(normalizeFitness)
     GAparams.addSub(fitness)
 
     specs.addSub(GAparams)
@@ -712,16 +707,6 @@ class GeneticAlgorithm(RavenSampled):
     else:
       self._penaltyCoeff = fitnessNode.findFirst('b').value if fitnessNode.findFirst('b') else None
       self._objCoeff = fitnessNode.findFirst('a').value if fitnessNode.findFirst('a') else None
-    self._normalizeFitness = fitnessNode.findFirst('normalize').value if fitnessNode.findFirst('normalize') else None
-    if not self._normalizeFitness:
-      self._normalizeFitness = False
-    elif self._normalizeFitness.lower() == 'none':
-      self._normalizeFitness = None #allow the user to specify NoneType in the string input
-    elif self._normalizeFitness.lower() == 'true':
-      self._normalizeFitness = 'zscore' #default to zscore normalization
-    elif self._normalizeFitness.lower() not in ['maxmin','zscore']:
-      self.raiseAnError(IOError, "Requested fitness normalization type not supported. Available options include 'maxmin' and 'zscore'.") #!TODO: maxmin has not yet been implemented.
-
     ####################################################################################
     # constraint node                                                                  #
     ####################################################################################
@@ -826,39 +811,20 @@ class GeneticAlgorithm(RavenSampled):
     currentPopInputs = datasetToDataArray(rlz, list(self.toBeSampled))
     currentPop_objvals = []
     for i in range(len(self._objectiveVar)):
-      currentPop_objvals.append(list(np.atleast_1d(rlz[self._objectiveVar[i]].data)))
+      objectiveVal.append(list(np.atleast_1d(rlz[self._objectiveVar[i]].data)))
 
   ## 1. Check constraint violations and calculate the constraint function g (<0 if the constraint is violated)
     currentPop_g = constraintHandling(self, info, rlz, currentPopInputs, currentPop_objvals, multiObjective=self._isMultiObjective)
 
-  ## 2. Normalize values for fitness function evaluation, if requested.
-    norm_rlz = deepcopy(rlz)
-    if self._normalizeFitness:
-      # collect variable names to normalize
-      constrVarsList = self._constraintFunctions + self._impConstraintFunctions
-      varsToNormalize = []
-      for x in constrVarsList:
-        varsToNormalize += x.parameterNames()
-      varsToNormalize = set(varsToNormalize + self._objectiveVar)
-      # calculate normalization parameters and store for later
-      self.normScores = {}
-      for var in varsToNormalize:
-        if self._normalizeFitness == "zscore":
-          self.normScores[var] = (np.mean(rlz[var].to_dataframe().values), np.std(rlz[var].to_dataframe().values))
-          # normalize values for fitness calc
-          for i in range(len(rlz[var])):
-            norm_rlz[var][i] = (rlz[var][i] - self.normScores[var][0]) / self.normScores[var][1] #perform zscore normalization
-            if np.isnan(norm_rlz[var][i]):
-              norm_rlz[var][i] = 0.0
-      # normalize evaluated constraint differences
-      for i in range(len(currentPop_g)):
-        for j in range(len(constrVarsList)):
-          #penalty represents a Delta applied to the obj value; i.e. (C_k - mu)/std - (C_i - mu)/std = (C_k - C_i)/std
-          #  If the constraint uses multiple variables/units, there's no easy way to handle it so we'll just assume the
-          #  first variable is the primary one.
-          currentPop_g[i][j] = currentPop_g[i][j] / self.normScores[constrVarsList[j].parameterNames()[0]][1]
-          if np.isnan(currentPop_g[i][j]):
-            currentPop_g[i][j] = 0.0
+    # 2. Compute fitness for the offspring
+    populationFitness = self._fitnessInstance(rlz,
+                                             objVar=self._objectiveVar,
+                                             a=self._objCoeff,
+                                             b=self._penaltyCoeff,
+                                             penalty=None,
+                                             constraintFunction=g,
+                                             constraintNum=self._numOfConst,
+                                             type=self._minMax)
 
   ## 3. Compute fitness for the current population
     currentPopFitness = self._fitnessInstance(norm_rlz,
@@ -970,7 +936,7 @@ class GeneticAlgorithm(RavenSampled):
                                                variables=list(self.toBeSampled),
                                                files = self.assemblerDict['Files'])
 
-  ## 9. repair/replacement
+      # 8. repair/replacement
       # Repair should only happen if multiple genes in a single chromosome have the same values (),
       # and at the same time the sampling of these genes should be with Out replacement.
       needsRepair = False
@@ -987,7 +953,7 @@ class GeneticAlgorithm(RavenSampled):
         children = childrenMutated
 
       # keeping the population size constant by ignoring the excessive children
-      children = children[:self._populationSize, :] #!TODO: implement elitism by cloning to "children" before step 3 and then extending with reproduced offspring in step 9.
+      children = children[:self._populationSize, :]
       daChildren = xr.DataArray(children,
                                 dims=['chromosome','Gene'],
                                 coords={'chromosome': np.arange(np.shape(children)[0]),
@@ -1047,6 +1013,7 @@ class GeneticAlgorithm(RavenSampled):
     self.hdsm = np.NaN
     self.bestPoint = None
     self.bestFitness = None
+    self.objectiveVal = None
     self.multiBestPoint = None
     self.multiBestFitness = None
     self.multiBestObjective = None
@@ -1183,27 +1150,21 @@ class GeneticAlgorithm(RavenSampled):
       self.raiseADebug("### rlz.sizes['RAVEN_sample_ID'] = {}".format(rlz.sizes['RAVEN_sample_ID']))
       for i in range(rlz.sizes['RAVEN_sample_ID']):
         if self._isMultiObjective:
-          # varList = self._solutionExport.getVars('input') + self._solutionExport.getVars('output') + list(self.toBeSampled.keys())
-          # varList = [var for var in varList if var not in self._objectiveVar]
-          varList = set(self._solutionExport.getVars() + list(self.toBeSampled))
-          rlzDict = dict((var,np.atleast_1d(rlz[var].data)[i]) for var in set(varList) if var in rlz.data_vars)
-          #!rlzDict.update(self.population.isel(chromosome=i).to_series().to_dict()) #make sure none of the chromosomes were missed from self.toBeSampled.
-          # for j in range(len(self._objectiveVar)):
-          #   if self._objectiveVar[j] not in rlzDict:
-          #     rlzDict[self._objectiveVar[j]] = self.objectiveVal[j][i]
+          rlzDict = self.population.isel(chromosome=i).to_series().to_dict()
+          for j in range(len(self._objectiveVar)):
+             rlzDict[self._objectiveVar[j]] = self.objectiveVal[j][i]
           rlzDict['batchId'] = self.batchId
-          rlzDict['rank'] = np.atleast_1d(ranks.data)[i]
-          rlzDict['CD'] = np.atleast_1d(CD.data)[i]
-          for ind, fitName in enumerate(list(fitness.keys())):
-            rlzDict['FitnessEvaluation_'+fitName] = fitness[fitName].data[i]
+          rlzDict['rank'] = np.atleast_1d(self.rank.data)[i]
+          rlzDict['CD'] = np.atleast_1d(self.crowdingDistance.data)[i]
+          for ind, fitName in enumerate(list(self.fitness.keys())):
+            rlzDict['FitnessEvaluation_'+fitName] = self.fitness[fitName].data[i]
           for ind, consName in enumerate([y.name for y in (self._constraintFunctions + self._impConstraintFunctions)]):
-            rlzDict['ConstraintEvaluation_'+consName] = g.data[i,ind]
+            rlzDict['ConstraintEvaluation_'+consName] = self.constraintsV.data[i,ind]
         else:
           varList = self._solutionExport.getVars('input') + self._solutionExport.getVars('output') + list(self.toBeSampled.keys())
           rlzDict = dict((var,np.atleast_1d(rlz[var].data)[i]) for var in set(varList) if var in rlz.data_vars)
           for j in range(len(self._objectiveVar)):
-            if self._objectiveVar[j] not in rlzDict:
-              rlzDict[self._objectiveVar[j]] = np.atleast_1d(rlz[self._objectiveVar[j]].data)[i]
+            rlzDict[self._objectiveVar[j]] = np.atleast_1d(rlz[self._objectiveVar[j]].data)[i]
           rlzDict['fitness'] = np.atleast_1d(fitness.to_array()[:,i])
           for ind, consName in enumerate(g['Constraint'].values):
             rlzDict['ConstraintEvaluation_'+consName] = g[i,ind]
@@ -1215,7 +1176,6 @@ class GeneticAlgorithm(RavenSampled):
       bestRlz = {}
       if self._isMultiObjective:
         varList = self._solutionExport.getVars('input') + self._solutionExport.getVars('output') + list(self.toBeSampled.keys())
-        varList = [var for var in varList if var not in self._objectiveVar]
         bestRlz = dict((var,np.atleast_1d(self.multiBestPoint[var])) for var in set(varList) if var in list(self.toBeSampled.keys()))
         for i in range(len(self._objectiveVar)):
           bestRlz[self._objectiveVar[i]] = [item[i] for item in self.multiBestObjective]
@@ -1260,7 +1220,7 @@ class GeneticAlgorithm(RavenSampled):
 
     return point
 
-  def _collectOptPointMulti(self, rlz, population, rank, CD, objVal, fitness, constraintsV):
+  def _collectOptPointMulti(self, population, rank, CD, objVal, fitness, constraintsV):
     """
       Collects the point (dict) from a realization
       @ In, population, Dataset, container containing the population
@@ -1290,8 +1250,7 @@ class GeneticAlgorithm(RavenSampled):
     optRank = rank.data[rankOneIDX]
     optCD = CD.data[rankOneIDX]
 
-    #!optPointsDic = dict((var,np.array(optPoints)[:,i]) for i, var in enumerate(population.Gene.data))
-    optPointsDic = dict((var,rlz.isel({'RAVEN_sample_ID': rankOneIDX})[var].data) for var in selVars)
+    optPointsDic = dict((var,np.array(optPoints)[:,i]) for i, var in enumerate(population.Gene.data))
     optConstNew = [list(y) for y in zip(*optConstraintsV)]
     if len(optConstNew) > 0:
       optConstNew = xr.DataArray(optConstNew,
@@ -1649,7 +1608,7 @@ class GeneticAlgorithm(RavenSampled):
       @ Out, toAdd, dict, additional entries
     """
     # meta variables
-    toAdd = {'age': 0 if self.currentPop_ages is None else self.currentPop_ages,
+    toAdd = {'age': 0 if self.popAge is None else self.popAge,
              'batchId': self.batchId,
              'AHDp': self.ahdp,
              'AHD': self.ahd,

@@ -14,6 +14,7 @@
     </analytic>
     <revisions>
       <revision author="wangc" date="2018-08-09">Add pivotParameter for time dependent ROM</revision>
+      <revision author="rollnk" date="2025-09-10">'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py.</revision>
     </revisions>
   </TestInfo>
 

@@ -38,6 +38,7 @@ src/crow_modules/randomENG_wrap.cpp
 src/crow_modules/randomENG.py
 test_out*
 dist/
+developer_tools/generated_raven.xsd
 
 # eclipse
 .project
@@ -68,7 +69,6 @@ tests/framework/ROM/TimeSeries/ARMA/InterpolatedMaxCycles/
 tests/framework/ROM/TimeSeries/SyntheticHistory/LogARMA/
 tests/framework/ROM/TimeSeries/SyntheticHistory/VARMA/
 tests/framework/ROM/TimeSeries/SyntheticHistory/ZeroFilterDiscontinuous/
-*.xml.bak
 
 # hpc
 node_*[0-9]

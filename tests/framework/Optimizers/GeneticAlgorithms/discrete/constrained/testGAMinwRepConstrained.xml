@@ -14,6 +14,9 @@
       This test uses myLocalSum's function, which is documented in the analytic tests documentation under
       the Optimizer functions section.
     </analytic>
+    <revisions>
+      <revision author="rollnk" date="2025-09-10">'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py.</revision>
+    </revisions>
   </TestInfo>
 
   <RunInfo>
@@ -63,7 +66,6 @@
       <GAparams>
         <populationSize>20</populationSize>
         <parentSelection>tournamentSelection</parentSelection>
-        <!-- rouletteWheel, tournamentSelection -->
         <reproduction>
           <crossover type="onePointCrossover">
             <crossoverProb>0.8</crossoverProb>
@@ -73,13 +75,9 @@
           </mutation>
         </reproduction>
         <fitness type="feasibleFirst"/>
-        <!--'invLinear', 'feasibleFirst', 'hardConstraint' -->
         <survivorSelection>fitnessBased</survivorSelection>
       </GAparams>
       <convergence>
-        <!--
-          <AHDp>0.0</AHDp>
-        -->
         <objective>6.0</objective>
       </convergence>
       <variable name="x1">

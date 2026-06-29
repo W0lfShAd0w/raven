@@ -16,6 +16,7 @@
             Example on how to use current (May 2024) capabilities to transfer
             string variables from a model to the other
         </revision>
+      <revision author="rollnk" date="2025-09-10">'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py.</revision>
     </revisions>
   </TestInfo>
 
@@ -136,12 +137,6 @@
       <Input>restart,multiplicationFactor</Input>
       <Output>Amodel2,Bmodel2,Cmodel2</Output>
     </PointSet>
-    <!--
-      following dataobjects are used in the ensemble model for
-      identifying the connections and transfer the information.
-      Note the variable 'restart' that is the string variable produced
-      from first code and transferred to second code
-    -->
     <PointSet name="Code1Data">
       <Input>multiplicationFactor,seed</Input>
       <Output>Amodel1,Bmodel1,Cmodel1,restart</Output>

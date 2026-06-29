@@ -493,7 +493,7 @@ the implicit constraints and False otherwise.""")
     for var in self.toBeSampled:
       val = denormed[var]
       lower, upper = self._variableBounds[var]
-      normalized[var] = (val - lower) / (upper - lower) #!TODO: this is defaulting to linear normalization. Add z-score normalization.
+      normalized[var] = (val - lower) / (upper - lower)
 
     return normalized
 

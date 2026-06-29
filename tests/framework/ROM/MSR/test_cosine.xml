@@ -19,6 +19,7 @@
       <revision author="maljdan" date="2016-02-10">    Adding functionality to allow a user to specify a filename for an Outstream object that is potentially different than its variable name in the RAVEN input file. Adjusting test cases to exercise this functionality.</revision>
       <revision author="maljdan" date="2016-04-06">    Updating test cases to reflect the changes to the user input.</revision>
       <revision author="maljdan" date="2017-01-19">Adding this test description.</revision>
+      <revision author="rollnk" date="2025-09-10">'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py.</revision>
     </revisions>
   </TestInfo>
 
@@ -50,7 +51,6 @@
   <ExternalXML node="Samplers" xmlToLoad="samplers.xml"/>
   <ExternalXML node="Steps" xmlToLoad="steps.xml"/>
   <OutStreams>
-    <!-- A csv file containing the output of the example -->
     <Print name="outData">
       <type>csv</type>
       <source>outData</source>

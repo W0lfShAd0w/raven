@@ -12,6 +12,7 @@
     </description>
     <revisions>
       <revision author="wangc" date="2021-11-22">Compare Voting Regressor with individual regressors</revision>
+      <revision author="rollnk" date="2025-09-10">'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py.</revision>
     </revisions>
   </TestInfo>
 
@@ -66,7 +67,6 @@
       <max_iter>-1</max_iter>
     </ROM>
     <ROM name="ridgeCV" subType="RidgeCV">
-      <!-- Using all of the defaults -->
       <Features>X,Y</Features>
       <Target>ans</Target>
       <alphas>0.1,1.0,10.0</alphas>
@@ -179,7 +179,6 @@
   </Distributions>
 
   <OutStreams>
-    <!-- A csv file containing the output of the example -->
     <Print name="outData">
       <type>csv</type>
       <source>outData</source>
@@ -253,7 +252,6 @@
   </OutStreams>
 
   <DataObjects>
-    <!-- The input PointSet object -->
     <PointSet name="dummyIN">
       <Input>X,Y</Input>
       <Output>OutputPlaceHolder</Output>
@@ -262,7 +260,6 @@
       <Input>X,Y</Input>
       <Output>ans</Output>
     </PointSet>
-    <!-- The output PointSet objects -->
     <PointSet name="outData">
       <Input>prefix, X,Y</Input>
       <Output>ans</Output>

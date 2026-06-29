@@ -17,6 +17,9 @@
        15.26527159,  0.16109538,  1.0258734 ,  0.0772615 ,  4.86960071]
       Prior on mean is U(-500, 500)
     </description>
+    <revisions>
+      <revision author="rollnk" date="2025-09-10">'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py.</revision>
+    </revisions>
   </TestInfo>
 
   <RunInfo>

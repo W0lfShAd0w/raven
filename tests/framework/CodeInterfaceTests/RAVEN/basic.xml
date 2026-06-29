@@ -17,6 +17,7 @@
     <revisions>
       <revision author="talbpaul" date="2018-05-02">added &quot;fully-correlated&quot; variable for innerUpperBound as a test of the mechanic</revision>
       <revision author="talbpaul" date="2018-11-06">modified inner run to use grid for speed, consistent results</revision>
+      <revision author="rollnk" date="2025-09-10">'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py.</revision>
     </revisions>
   </TestInfo>
 

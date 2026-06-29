@@ -9,6 +9,9 @@
       This test is designed to find the optimal solution of a basic knapsack problem using tournament select.
       optimal solution of the knapsack problem is: elements 2 8 and 10 which gives the value set to 11.
     </description>
+    <revisions>
+      <revision author="rollnk" date="2025-09-10">'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py.</revision>
+    </revisions>
   </TestInfo>
 
   <RunInfo>
@@ -40,7 +43,6 @@
   <Distributions>
     <UniformDiscrete name="unif_dist_wRepl">
       <lowerBound>0</lowerBound>
-      <!-- 0 implies not chosen -->
       <upperBound>1</upperBound>
       <strategy>withReplacement</strategy>
     </UniformDiscrete>

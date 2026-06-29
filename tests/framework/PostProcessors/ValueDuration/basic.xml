@@ -8,6 +8,9 @@
     <description>
       Tests the basic functionality of the ValueDuration postprocessor to create their unique brand of cumulative histograms.
     </description>
+    <revisions>
+      <revision author="rollnk" date="2025-09-10">'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py.</revision>
+    </revisions>
   </TestInfo>
 
   <RunInfo>

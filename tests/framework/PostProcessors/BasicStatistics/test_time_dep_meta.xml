@@ -10,6 +10,9 @@
       the input of HistorySet, while vector meta data should be printed with output of HistorySet. See issue #986.
       With the fix of #986, The HistorySet will handle scalar and vector meta data separately.
     </description>
+    <revisions>
+      <revision author="rollnk" date="2025-09-10">'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py.</revision>
+    </revisions>
   </TestInfo>
 
   <RunInfo>

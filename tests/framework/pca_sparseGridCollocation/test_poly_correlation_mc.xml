@@ -20,6 +20,9 @@
       This test is analytic in mean and variance using the &quot;tensor polynomial&quot; analytic model
       documented in the analytic tests.
     </analytic>
+    <revisions>
+      <revision author="rollnk" date="2025-09-10">'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py.</revision>
+    </revisions>
   </TestInfo>
 
   <DataObjects>

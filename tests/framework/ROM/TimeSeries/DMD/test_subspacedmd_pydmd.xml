@@ -9,6 +9,9 @@
        This test is aimed to check the mechanics of the DMD ROM using the Subspace
        dynamic mode decomposition for stochastic Koopman analysis.
     </description>
+    <revisions>
+      <revision author="rollnk" date="2025-09-10">'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py.</revision>
+    </revisions>
   </TestInfo>
 
   <RunInfo>
@@ -26,7 +29,6 @@
   </RunInfo>
 
   <Files>
-    <!--  we load the data from the PolyExponential database -->
     <Input name="rawDataFile">../../PolyExponential/data/decay_heat.csv</Input>
     <Input name="ROMpk" type="">ROMpk</Input>
   </Files>

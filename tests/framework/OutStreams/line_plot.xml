@@ -11,6 +11,7 @@
     </description>
     <revisions>
       <revision author="alfoa" date="2020-04-07">Modified test to be consistent with newer projectile model</revision>
+      <revision author="rollnk" date="2025-09-10">'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py.</revision>
     </revisions>
   </TestInfo>
 

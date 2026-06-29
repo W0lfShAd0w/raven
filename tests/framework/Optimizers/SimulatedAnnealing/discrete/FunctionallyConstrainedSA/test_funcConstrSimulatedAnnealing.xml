@@ -9,6 +9,9 @@
      This test assesses the usage of Simulated Annealing with discrete variables and functional constraints.
      The test is an adaptation of the test ``framework.Optimizers.SimulatedAnnealing.continuous.FuncionallyConstrainedSA'' using discrete distributions.
     </description>
+    <revisions>
+      <revision author="rollnk" date="2025-09-10">'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py.</revision>
+    </revisions>
   </TestInfo>
 
   <RunInfo>

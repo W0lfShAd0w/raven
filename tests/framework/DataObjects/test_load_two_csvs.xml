@@ -9,6 +9,9 @@
        This test verifies that multiple files can be loaded into a single point
        set without destroying the information from each other.
     </description>
+    <revisions>
+      <revision author="rollnk" date="2025-09-10">'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py.</revision>
+    </revisions>
   </TestInfo>
 
   <RunInfo>

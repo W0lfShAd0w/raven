@@ -15,6 +15,7 @@
       <revision author="ZHOUJ2" date="2019-10-17"> This test will run twice to
       make sure if a working directory is already exist, warning message will be
       shown up. Assures the results and the subdirectory generated are identical.</revision>
+      <revision author="rollnk" date="2025-09-10">'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py.</revision>
     </revisions>
   </TestInfo>
 

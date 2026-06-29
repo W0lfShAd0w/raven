@@ -23,8 +23,10 @@ def convert(tree,fileName=None):
   """
   newTag = 'globalSeed'
   newValue = 5489
+  revisionStr = "'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py."
 
   simulation = tree.getroot()
+  # Add 'globalSeed' tag to 'RunInfo' node
   runInfo = simulation.find('RunInfo')
   if runInfo is not None:
     elemExists = False
@@ -35,6 +37,28 @@ def convert(tree,fileName=None):
       newElem = ET.Element(newTag)
       newElem.text = str(newValue)
       runInfo.append(newElem)
+  # Update 'TestInfo' tag
+    testInfo = simulation.find('TestInfo')
+    if testInfo is not None:
+      elemExists = False
+      for child in testInfo:
+        if child.tag == 'revisions':
+          elemExists = True
+      if elemExists:
+        revisions = testInfo.find('revisions')
+        newRevision = ET.Element('revision')
+        newRevision.attrib['author'] = "rollnk"
+        newRevision.attrib['date'] = "2025-09-10"
+        newRevision.text = revisionStr
+        revisions.append(newRevision)
+      else:
+        revisions = ET.Element('revisions')
+        newRevision = ET.Element('revision')
+        newRevision.attrib['author'] = "rollnk"
+        newRevision.attrib['date'] = "2025-09-10"
+        newRevision.text = revisionStr
+        revisions.append(newRevision)
+        testInfo.append(revisions)
   return tree
 
 if __name__=='__main__':
@@ -42,4 +66,4 @@ if __name__=='__main__':
   import sys
   convert_utils.standardMain(sys.argv,convert)
   ## the following is provided as an example format for the expected content of the system arguments (sys.argv):
-  #sys.argv = ['/home/rollnk/LWRS-PRLO/raven_latest/scripts/conversionScripts/convert_globalseed.py','--tests','--no-rewrite']
+  #sys.argv = ['/home/rollnk/LWRS-PRLO/raven_deployed/scripts/conversionScripts/convert_globalseed.py','--tests','--no-rewrite','--remove-comments','/home/rollnk/LWRS-PRLO/raven_deployed/tests/']

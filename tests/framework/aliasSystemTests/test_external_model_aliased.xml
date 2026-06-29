@@ -15,10 +15,10 @@
       <revision author="alfoa" date="2017-01-21">Adding this test description.</revision>
       <revision author="talbpaul" date="2018-04-04">added awful.variable+name for hard-testing input alias</revision>
       <revision author="talbpaul" date="2022-01-18">added difficult output alias, index-ish alias</revision>
+      <revision author="rollnk" date="2025-09-10">'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py.</revision>
     </revisions>
   </TestInfo>
 
-  <!-- RUNINFO -->
   <RunInfo>
     <WorkingDir>externalModel</WorkingDir>
     <Sequence>FirstMRunForTestAlias,printContentOfHDF5</Sequence>
@@ -26,7 +26,6 @@
     <globalSeed>5489</globalSeed>
   </RunInfo>
 
-  <!-- STEPS -->
   <Steps>
     <MultiRun name="FirstMRunForTestAlias" re-seeding="25061978">
       <Input class="DataObjects" type="PointSet">inputPlaceHolder</Input>
@@ -48,7 +47,6 @@
     </IOStep>
   </Steps>
 
-  <!-- MODELS -->
   <Models>
     <ExternalModel ModuleToLoad="lorentzAttractor" name="PythonModule" subType="">
       <variables>sigma,rho,beta,x,y,z,time,x0,y0,z0</variables>
@@ -59,7 +57,6 @@
     </ExternalModel>
   </Models>
 
-  <!-- DISTRIBUTIONS -->
   <Distributions>
     <Normal name="x0_distrib">
       <mean>4</mean>
@@ -75,7 +72,6 @@
     </Normal>
   </Distributions>
 
-  <!-- SAMPLERS -->
   <Samplers>
     <MonteCarlo name="MC_external">
       <samplerInit>
@@ -93,12 +89,10 @@
     </MonteCarlo>
   </Samplers>
 
-  <!-- DATABASES -->
   <Databases>
     <HDF5 name="test_external_db" readMode="overwrite"/>
   </Databases>
 
-  <!-- OUTSTREAMS -->
   <OutStreams>
     <Print name="testPrintHistorySet_dump">
       <type>csv</type>
@@ -122,7 +116,6 @@
     </Print>
   </OutStreams>
 
-  <!-- DATA OBJECTS -->
   <DataObjects>
     <PointSet name="inputPlaceHolder">
       <Input>x0,y0,z0</Input>

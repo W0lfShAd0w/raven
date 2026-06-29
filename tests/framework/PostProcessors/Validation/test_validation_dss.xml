@@ -12,6 +12,7 @@
       <revision author="yoshrk" date="2021-03-16">no writing directly to files from postprocessors</revision>
       <revision author="yoshrk" date="2021-10-20">accepted format to merge with RAVEN devel</revision>
       <revision author="yoshrk" date="2022-05-25">added capability to postprocess based on user defined time segmentation</revision>
+      <revision author="rollnk" date="2025-09-10">'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py.</revision>
     </revisions>
   </TestInfo>
 

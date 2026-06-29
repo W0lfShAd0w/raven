@@ -11,6 +11,9 @@
       on a time dependent surrogate model. The transformation is applied on the feature space, which
       is correlated since the sampling table (custom) has been generated via multi variate distributions.
     </description>
+    <revisions>
+      <revision author="rollnk" date="2025-09-10">'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py.</revision>
+    </revisions>
   </TestInfo>
 
   <RunInfo>

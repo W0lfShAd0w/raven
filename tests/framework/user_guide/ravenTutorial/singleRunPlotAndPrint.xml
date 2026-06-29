@@ -17,6 +17,9 @@
       This test is an example for the user guide to draw from.  It demonstrates a streamlined workflow of
       using the SingleRun step to take a single sample, then plot and print the results.
     </description>
+    <revisions>
+      <revision author="rollnk" date="2025-09-10">'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py.</revision>
+    </revisions>
   </TestInfo>
 
   <Files>

@@ -20,6 +20,7 @@
     </description>
     <revisions>
       <revision author="aalfonsi" date="2023-05-17">added test</revision>
+      <revision author="rollnk" date="2025-09-10">'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py.</revision>
     </revisions>
   </TestInfo>
 
@@ -126,10 +127,6 @@
             pearson_x0_y, pearson_y0_y, pearson_z0_y, pearson_x_y, pearson_y_y, pearson_z_y,
             pearson_x0_z, pearson_y0_z, pearson_z0_z, pearson_x_z, pearson_y_z, pearson_z_z
         </Output>
-      <!-- These can't be calculated with the small sample size.
-	    skew_x0, skew_y0, skew_z0, skew_x, skew_y, skew_z,
-            kurt_x0, kurt_y0, kurt_z0, kurt_x, kurt_y, kurt_z,
-	    -->
       <options>
         <pivotParameter>time</pivotParameter>
       </options>

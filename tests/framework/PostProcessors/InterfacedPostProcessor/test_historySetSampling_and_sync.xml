@@ -11,6 +11,7 @@
     </description>
     <revisions>
       <revision author="alfoa" date="2019-10-08">Created test to show how to perform the sync</revision>
+      <revision author="rollnk" date="2025-09-10">'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py.</revision>
     </revisions>
   </TestInfo>
 

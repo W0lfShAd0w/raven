@@ -8,6 +8,9 @@
     <description>
        Test to check the functionalities of DataObjects.DataSet to be constructed by an extern input file (csv)
     </description>
+    <revisions>
+      <revision author="rollnk" date="2025-09-10">'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py.</revision>
+    </revisions>
   </TestInfo>
 
   <RunInfo>

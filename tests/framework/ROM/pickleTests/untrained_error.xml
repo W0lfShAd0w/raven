@@ -15,6 +15,9 @@
     <description>
       This test checks that a reasonable error is given to the user if an untrained rom is unpickled then sampled.
     </description>
+    <revisions>
+      <revision author="rollnk" date="2025-09-10">'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py.</revision>
+    </revisions>
   </TestInfo>
 
   <Files>

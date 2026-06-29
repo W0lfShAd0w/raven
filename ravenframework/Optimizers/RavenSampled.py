@@ -474,7 +474,7 @@ class RavenSampled(Optimizer):
     # so get the correct-signed value into the realization
 
     for objVar in self._objectiveVar:
-      rlz[objVar] *= self._objMult[objVar] #multiply by -1 to maximize obj or by 1 to minimize obj
+      rlz[objVar] *= self._objMult[objVar]
     # TODO FIXME let normalizeData work on an xr.DataSet (batch) not just a dictionary!
     # NOTE:
     # Previously we called _useRealization(info, rlz) directly here.
@@ -834,6 +834,7 @@ class RavenSampled(Optimizer):
       if bestPoint not in self._finals:
           self._updateSolutionExport(bestTraj, self.normalizeData(bestOpt), 'final', 'None')
           self._finals.append(bestPoint)
+
 
   def flush(self):
     """
@@ -1253,10 +1254,6 @@ class RavenSampled(Optimizer):
                      'rejectReason': rejectReason,
                      'modelRuns': self.counter
                     })
-    # add the contents of the realization
-    toExport.update(dict((var, rlz[var]) for var in rlz))
-
-    ## the following are sanity checks and data reformatting
     # optimal point input and output spaces
     for objVar in self._objectiveVar:
       objValue = rlz[objVar]*self._objMult[objVar]
@@ -1264,11 +1261,11 @@ class RavenSampled(Optimizer):
     toExport.update(self.denormalizeData(dict((var, rlz[var]) for var in self.toBeSampled)))
     # constants and functions
     toExport.update(self.constants)
-    toExport.update(dict((var, rlz[var]) for var in self.dependentSample if var in rlz)) #!TODO:redundant, remove.
+    toExport.update(dict((var, rlz[var]) for var in self.dependentSample if var in rlz))
     # additional from inheritors
     toExport.update(self._addToSolutionExport(traj, rlz, acceptable))
     # check for anything else that solution export wants that rlz might provide
-    for var in self._solutionExport.getVars(): #!TODO:redundant, remove.
+    for var in self._solutionExport.getVars():
       if var not in toExport and var in rlz:
         toExport[var] = rlz[var]
     # formatting

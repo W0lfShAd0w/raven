@@ -14,6 +14,7 @@
       <revision author="alfoa" date="2015-06-18">Changed Name of all DataObjects</revision>
       <revision author="alfoa" date="2016-04-27">New subdirectories structure</revision>
       <revision author="alfoa" date="2017-01-21">Adding this test description.</revision>
+      <revision author="rollnk" date="2025-09-10">'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py.</revision>
     </revisions>
   </TestInfo>
 
@@ -23,17 +24,6 @@
     <batchSize>3</batchSize>
     <CustomMode class="NewMode" file="./mode_test/new_mode.py">a_new_mode</CustomMode>
     <mode>a_new_mode</mode>
-    <!--
-      <ParallelCommand/>
-      <NumMPI/>
-      <ThreadingCommand/>
-      <NumThreads/>
-      <numNode/>
-      <queueingSoftware/>
-      <procByNode/>
-      <numProcByRun/>
-      <totalNumCoresUsed/>
-    -->
     <globalSeed>5489</globalSeed>
   </RunInfo>
 

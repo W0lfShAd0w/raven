@@ -20,6 +20,9 @@
         The outputs are posterior mean, and fraction value reflecting the error between posterior and prior mean
         of Target, and has columns:'time', 'Tdep_post_mean', 'Error'.
     </description>
+    <revisions>
+      <revision author="rollnk" date="2025-09-10">'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py.</revision>
+    </revisions>
   </TestInfo>
 
   <Files>

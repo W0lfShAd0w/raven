@@ -15,6 +15,7 @@
           the pointwise metadata, and will be printed out in the output csv files by default.
           In this case, the time dependent standard errors will be printed out.
       </revision>
+      <revision author="rollnk" date="2025-09-10">'globalSeed' tag added to node 'RunInfo' to enable backwards compatability following updates made to randomUtils.py.</revision>
     </revisions>
   </TestInfo>
 
