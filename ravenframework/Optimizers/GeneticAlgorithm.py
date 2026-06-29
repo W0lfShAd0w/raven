@@ -807,7 +807,6 @@ class GeneticAlgorithm(RavenSampled):
       self._closeTrajectory(t, 'cancel', 'Currently GA is single trajectory', 0)
     self.incrementIteration(traj)
 
-
     currentPopInputs = datasetToDataArray(rlz, list(self.toBeSampled))
     currentPop_objvals = []
     for i in range(len(self._objectiveVar)):
@@ -816,15 +815,34 @@ class GeneticAlgorithm(RavenSampled):
   ## 1. Check constraint violations and calculate the constraint function g (<0 if the constraint is violated)
     currentPop_g = constraintHandling(self, info, rlz, currentPopInputs, currentPop_objvals, multiObjective=self._isMultiObjective)
 
-    # 2. Compute fitness for the offspring
-    populationFitness = self._fitnessInstance(rlz,
-                                             objVar=self._objectiveVar,
-                                             a=self._objCoeff,
-                                             b=self._penaltyCoeff,
-                                             penalty=None,
-                                             constraintFunction=g,
-                                             constraintNum=self._numOfConst,
-                                             type=self._minMax)
+  ## 2. Normalize values for fitness function evaluation, if requested.
+    norm_rlz = deepcopy(rlz)
+    if self._normalizeFitness:
+      # collect variable names to normalize
+      constrVarsList = self._constraintFunctions + self._impConstraintFunctions
+      varsToNormalize = []
+      for x in constrVarsList:
+        varsToNormalize += x.parameterNames()
+      varsToNormalize = set(varsToNormalize + self._objectiveVar)
+      # calculate normalization parameters and store for later
+      self.normScores = {}
+      for var in varsToNormalize:
+        if self._normalizeFitness == "zscore":
+          self.normScores[var] = (np.mean(rlz[var].to_dataframe().values), np.std(rlz[var].to_dataframe().values))
+          # normalize values for fitness calc
+          for i in range(len(rlz[var])):
+            norm_rlz[var][i] = (rlz[var][i] - self.normScores[var][0]) / self.normScores[var][1] #perform zscore normalization
+            if np.isnan(norm_rlz[var][i]):
+              norm_rlz[var][i] = 0.0
+      # normalize evaluated constraint differences
+      for i in range(len(currentPop_g)):
+        for j in range(len(constrVarsList)):
+          #penalty represents a Delta applied to the obj value; i.e. (C_k - mu)/std - (C_i - mu)/std = (C_k - C_i)/std
+          #  If the constraint uses multiple variables/units, there's no easy way to handle it so we'll just assume the
+          #  first variable is the primary one.
+          currentPop_g[i][j] = currentPop_g[i][j] / self.normScores[constrVarsList[j].parameterNames()[0]][1]
+          if np.isnan(currentPop_g[i][j]):
+            currentPop_g[i][j] = 0.0
 
   ## 3. Compute fitness for the current population
     currentPopFitness = self._fitnessInstance(norm_rlz,
@@ -936,7 +954,7 @@ class GeneticAlgorithm(RavenSampled):
                                                variables=list(self.toBeSampled),
                                                files = self.assemblerDict['Files'])
 
-      # 8. repair/replacement
+      # 9. repair/replacement
       # Repair should only happen if multiple genes in a single chromosome have the same values (),
       # and at the same time the sampling of these genes should be with Out replacement.
       needsRepair = False
