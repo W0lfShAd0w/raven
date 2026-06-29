@@ -779,30 +779,30 @@ class RavenSampled(Optimizer):
       self.raiseAnError(RuntimeError, f'There is no optimization history for traj {traj}! ' +
                         'Perhaps the Model failed?')
 
-    ## If any solution in the population has a higher fitness value than what is found in ._optPointHistory, add it to opt. NOTE: this only searches the most recent iteration of the optimizer.
+    ## If any solution in the history has a higher objective value than what is found in ._optPointHistory, add it to opt. NOTE: this only searches the most recent iteration of the optimizer.
     opt = self._optPointHistory[traj][-1][0]
-    fitnessVars = [var for var in list(opt) if 'fitness' in var.lower()]
+    objectiveVars = [var for var in list(opt) if self._objectiveVar in var.lower()] #!TODO(rollnk): this may break for GA, since "fitness" != _objectiveVar.
     self._solutionExport.asDataset() #empty _collector into _data
-    ## Search the rest of the population
-    if hasattr(self,"_sampledPopulationInfo"):
-      bestInPopulation = {}
-      # find best solns from the population
-      for soln1 in self._sampledPopulationInfo:
-          if not bestInPopulation:
-              bestInPopulation[soln1] = self._sampledPopulationInfo[soln1]
+    ## Search the rest of the history
+    if hasattr(self,"_sampledHistoryInfo"):
+      bestInHistory = {}
+      # find best solns from the history
+      for soln1 in self._sampledHistoryInfo:
+          if not bestInHistory:
+              bestInHistory[soln1] = self._sampledHistoryInfo[soln1]
           else:
-              for soln2 in copy.deepcopy(bestInPopulation):
-                  if (self._sampledPopulationInfo[soln1] > bestInPopulation[soln2]).all():
-                      del bestInPopulation[soln2] #replace previous entry with better one
-                      bestInPopulation[soln1] = self._sampledPopulationInfo[soln1]
-                  elif (self._sampledPopulationInfo[soln1] > bestInPopulation[soln2]).any():
-                      bestInPopulation[soln1] = self._sampledPopulationInfo[soln1]
+              for soln2 in copy.deepcopy(bestInHistory):
+                  if (self._sampledHistoryInfo[soln1] > bestInHistory[soln2]).all():
+                      del bestInHistory[soln2] #replace previous entry with better one
+                      bestInHistory[soln1] = self._sampledHistoryInfo[soln1]
+                  elif (self._sampledHistoryInfo[soln1] > bestInHistory[soln2]).any():
+                      bestInHistory[soln1] = self._sampledHistoryInfo[soln1]
       # try to add best solns to list of optimal solns
-      for soln in bestInPopulation:
-        if (bestInPopulation[soln] > [max(opt[key]) for key in fitnessVars]).any(): #if any fitness value in soln is greater than all corresponding fitness values in opt, this is True.
-            for indx in range(len(self._solutionExport._data[list(self._solutionExport._data)[0]])): #search the population data for the inputs in soln
+      for soln in bestInHistory:
+        if (bestInHistory[soln] > [max(opt[key]) for key in objectiveVars]).any(): #if any objective value in soln is greater than all corresponding objective values in opt, this is True.
+            for indx in range(len(self._solutionExport._data[list(self._solutionExport._data)[0]])): #search the history data for the inputs in soln
               if np.all(np.array(soln) == [self._solutionExport._data[key][indx].item() for key in self.toBeSampled]):
-                # add soln values from population data to opt
+                # add soln values from history data to opt
                 for key in list(opt):
                   try:
                     if key in self._objectiveVar:
@@ -812,7 +812,7 @@ class RavenSampled(Optimizer):
                       opt[key] = np.append(opt[key], self._solutionExport._data[key][indx].item())
                   except KeyError:
                     opt[key] = np.append(opt[key], None) #If the key is missing from solutionExport, it isn't in the addRealization and won't be used anyway.
-                break # NOTE: it shouldn't be possible, but this would fail silently if soln isn't found in the population data
+                break # NOTE: it shouldn't be possible, but this would fail silently if soln isn't found in the history data
 
     #Note: bestTraj == traj
     for i in range(len(np.atleast_1d(opt[self._objectiveVar[0]]))):
