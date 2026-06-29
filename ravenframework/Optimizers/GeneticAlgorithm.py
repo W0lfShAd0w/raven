@@ -811,7 +811,7 @@ class GeneticAlgorithm(RavenSampled):
     currentPopInputs = datasetToDataArray(rlz, list(self.toBeSampled))
     currentPop_objvals = []
     for i in range(len(self._objectiveVar)):
-      objectiveVal.append(list(np.atleast_1d(rlz[self._objectiveVar[i]].data)))
+      currentPop_objvals.append(list(np.atleast_1d(rlz[self._objectiveVar[i]].data)))
 
   ## 1. Check constraint violations and calculate the constraint function g (<0 if the constraint is violated)
     currentPop_g = constraintHandling(self, info, rlz, currentPopInputs, currentPop_objvals, multiObjective=self._isMultiObjective)
