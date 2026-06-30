@@ -1254,6 +1254,8 @@ class RavenSampled(Optimizer):
                      'rejectReason': rejectReason,
                      'modelRuns': self.counter
                     })
+    # add the contents of the realization
+    #!toExport.update(dict((var, rlz[var]) for var in rlz)) #!TODO(rollnk): this was removed by a merge conflict. Is it still needed?
     # optimal point input and output spaces
     for objVar in self._objectiveVar:
       objValue = rlz[objVar]*self._objMult[objVar]
