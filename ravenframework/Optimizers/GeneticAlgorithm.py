@@ -568,6 +568,11 @@ class GeneticAlgorithm(RavenSampled):
         printPriority=108,
         descr=r""" shift: in case of logistic fitness, this is the shift in the exponential function for the onjective(s). \default{list of zeros}""")
     fitness.addSub(shift)
+    normalizeFitness = InputData.parameterInputFactory('normalize', strictMode=False,
+        contentType=InputTypes.StringType,
+        printPriority=108,
+        descr=r""" normalize: input and output data will be normalized prior to calculating fitness for each iteration of the optimizer. \default{zscore}""")
+    fitness.addSub(normalizeFitness)
     GAparams.addSub(fitness)
 
     specs.addSub(GAparams)
@@ -707,6 +712,16 @@ class GeneticAlgorithm(RavenSampled):
     else:
       self._penaltyCoeff = fitnessNode.findFirst('b').value if fitnessNode.findFirst('b') else None
       self._objCoeff = fitnessNode.findFirst('a').value if fitnessNode.findFirst('a') else None
+    self._normalizeFitness = fitnessNode.findFirst('normalize').value if fitnessNode.findFirst('normalize') else None
+    if not self._normalizeFitness:
+      self._normalizeFitness = False
+    elif self._normalizeFitness.lower() == 'none':
+      self._normalizeFitness = None #allow the user to specify NoneType in the string input
+    elif self._normalizeFitness.lower() == 'true':
+      self._normalizeFitness = 'zscore' #default to zscore normalization
+    elif self._normalizeFitness.lower() not in ['maxmin','zscore']:
+      self.raiseAnError(IOError, "Requested fitness normalization type not supported. Available options include 'maxmin' and 'zscore'.") #!TODO: maxmin has not yet been implemented.
+
     ####################################################################################
     # constraint node                                                                  #
     ####################################################################################
@@ -1168,21 +1183,25 @@ class GeneticAlgorithm(RavenSampled):
       self.raiseADebug("### rlz.sizes['RAVEN_sample_ID'] = {}".format(rlz.sizes['RAVEN_sample_ID']))
       for i in range(rlz.sizes['RAVEN_sample_ID']):
         if self._isMultiObjective:
-          rlzDict = self.population.isel(chromosome=i).to_series().to_dict()
-          for j in range(len(self._objectiveVar)):
-             rlzDict[self._objectiveVar[j]] = self.objectiveVal[j][i]
+          varList = set(self._solutionExport.getVars() + list(self.toBeSampled))
+          rlzDict = dict((var,np.atleast_1d(rlz[var].data)[i]) for var in set(varList) if var in rlz.data_vars)
+          #!rlzDict.update(self.population.isel(chromosome=i).to_series().to_dict()) #make sure none of the chromosomes were missed from self.toBeSampled.
+          # for j in range(len(self._objectiveVar)):
+          #   if self._objectiveVar[j] not in rlzDict:
+          #     rlzDict[self._objectiveVar[j]] = self.objectiveVal[j][i]
           rlzDict['batchId'] = self.batchId
-          rlzDict['rank'] = np.atleast_1d(self.rank.data)[i]
-          rlzDict['CD'] = np.atleast_1d(self.crowdingDistance.data)[i]
-          for ind, fitName in enumerate(list(self.fitness.keys())):
-            rlzDict['FitnessEvaluation_'+fitName] = self.fitness[fitName].data[i]
+          rlzDict['rank'] = np.atleast_1d(ranks.data)[i]
+          rlzDict['CD'] = np.atleast_1d(CD.data)[i]
+          for ind, fitName in enumerate(list(fitness.keys())):
+            rlzDict['FitnessEvaluation_'+fitName] = fitness[fitName].data[i]
           for ind, consName in enumerate([y.name for y in (self._constraintFunctions + self._impConstraintFunctions)]):
-            rlzDict['ConstraintEvaluation_'+consName] = self.constraintsV.data[i,ind]
+            rlzDict['ConstraintEvaluation_'+consName] = g.data[i,ind]
         else:
           varList = self._solutionExport.getVars('input') + self._solutionExport.getVars('output') + list(self.toBeSampled.keys())
           rlzDict = dict((var,np.atleast_1d(rlz[var].data)[i]) for var in set(varList) if var in rlz.data_vars)
           for j in range(len(self._objectiveVar)):
-            rlzDict[self._objectiveVar[j]] = np.atleast_1d(rlz[self._objectiveVar[j]].data)[i]
+            if self._objectiveVar[j] not in rlzDict:
+              rlzDict[self._objectiveVar[j]] = np.atleast_1d(rlz[self._objectiveVar[j]].data)[i]
           rlzDict['fitness'] = np.atleast_1d(fitness.to_array()[:,i])
           for ind, consName in enumerate(g['Constraint'].values):
             rlzDict['ConstraintEvaluation_'+consName] = g[i,ind]
@@ -1194,6 +1213,7 @@ class GeneticAlgorithm(RavenSampled):
       bestRlz = {}
       if self._isMultiObjective:
         varList = self._solutionExport.getVars('input') + self._solutionExport.getVars('output') + list(self.toBeSampled.keys())
+        varList = [var for var in varList if var not in self._objectiveVar]
         bestRlz = dict((var,np.atleast_1d(self.multiBestPoint[var])) for var in set(varList) if var in list(self.toBeSampled.keys()))
         for i in range(len(self._objectiveVar)):
           bestRlz[self._objectiveVar[i]] = [item[i] for item in self.multiBestObjective]
@@ -1238,7 +1258,7 @@ class GeneticAlgorithm(RavenSampled):
 
     return point
 
-  def _collectOptPointMulti(self, population, rank, CD, objVal, fitness, constraintsV):
+  def _collectOptPointMulti(self, rlz, population, rank, CD, objVal, fitness, constraintsV):
     """
       Collects the point (dict) from a realization
       @ In, population, Dataset, container containing the population
@@ -1626,7 +1646,7 @@ class GeneticAlgorithm(RavenSampled):
       @ Out, toAdd, dict, additional entries
     """
     # meta variables
-    toAdd = {'age': 0 if self.popAge is None else self.popAge,
+    toAdd = {'age': 0 if self.currentPop_ages is None else self.currentPop_ages,
              'batchId': self.batchId,
              'AHDp': self.ahdp,
              'AHD': self.ahd,
