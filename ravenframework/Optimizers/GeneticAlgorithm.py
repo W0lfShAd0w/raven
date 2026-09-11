@@ -317,7 +317,7 @@ class GeneticAlgorithm(RavenSampled):
     self._requiredPersistence = 0                                # consecutive persistence required to mark convergence
     self.needDenormalized()                                      # the default in all optimizers is to normalize the data which is not the case here
     self.batchId = 0
-    self.prevPop_inputs = None
+    self.prevPopInputs = None
     self.currentPop_ages = None
     self.matingPopInputs = None                                 # panda Dataset container containing the population at the beginning of each generation iteration
     self.matingPopObjVals = None                                # objective values of solutions
@@ -895,7 +895,11 @@ class GeneticAlgorithm(RavenSampled):
         for i in range(len(self.currentPop_ages)):
           indv = currentPopInputs[i]
           for indx, val in enumerate(self.matingPopInputs):
-            if val.equals(indv):
+            # NOTE: compare gene values only, not full DataArray equality: val and indv carry
+            # independent 'chromosome' coordinate labels (their positions in the mating pool vs.
+            # the current batch), so val.equals(indv) fails on coordinate mismatch even when the
+            # genotypes are identical.
+            if np.array_equal(val.data, indv.data):
               self.currentPop_ages[i] = self.matingPopAges[indx]
               break
 
@@ -904,20 +908,20 @@ class GeneticAlgorithm(RavenSampled):
   ## Single-objective post-processing
       if not self._isMultiObjective:
           self._collectOptPoint(rlz, currentPopFitness, currentPop_objvals[0], currentPop_g)
-          self._resolveNewGeneration(traj, rlz, info, self.prevPop_inputs, currentPop_objvals[0], currentPopFitness, currentPop_g)
+          self._resolveNewGeneration(traj, rlz, info, self.prevPopInputs, currentPop_objvals[0], currentPopFitness, currentPop_g)
   ## Multi-objective post-processing
       else:
         # list for Rank and CD calculation
-        currentPop_fitsbysoln = datasetToDataArray(currentPopFitness, self._objectiveVar).data.tolist()
+        currentPopFitsBySoln = datasetToDataArray(currentPopFitness, self._objectiveVar).data.tolist()
     ## 5. Compute the rank of current population
-        currentPopRanks = frontUtils.rankNonDominatedFrontiers(np.array(currentPop_fitsbysoln), isFitness=True)
+        currentPopRanks = frontUtils.rankNonDominatedFrontiers(np.array(currentPopFitsBySoln), isFitness=True)
         currentPopRanks = xr.DataArray(currentPopRanks,
                                       dims=['rank'],
                                       coords={'rank': np.arange(np.shape(currentPopRanks)[0])})
     ## 6. Compute the crowding distance of current population
         currentPopCD = frontUtils.crowdingDistance(rank=currentPopRanks,
                                                             popSize=len(currentPopRanks),
-                                                            fitness=np.array(currentPop_fitsbysoln))
+                                                            fitness=np.array(currentPopFitsBySoln))
         currentPopCD = xr.DataArray(currentPopCD,
                                               dims=['CrowdingDistance'],
                                               coords={'CrowdingDistance': np.arange(np.shape(currentPopCD)[0])})
@@ -929,7 +933,7 @@ class GeneticAlgorithm(RavenSampled):
                                    currentPop_objvals,
                                    currentPopFitness,
                                    currentPop_g)
-        self._resolveNewGeneration(traj, rlz, info, self.prevPop_inputs, currentPop_objvals, currentPopFitness, currentPop_g, currentPopRanks, currentPopCD)
+        self._resolveNewGeneration(traj, rlz, info, self.prevPopInputs, currentPop_objvals, currentPopFitness, currentPop_g, currentPopRanks, currentPopCD)
 
   ## 7. Parent selection from population
       if self.counter > 1:
@@ -1008,7 +1012,7 @@ class GeneticAlgorithm(RavenSampled):
         self._submitRun(child, traj, self.getIteration(traj))
 
   ## 11. Save grandparents
-    self.prevPop_inputs = deepcopy(currentPopInputs)
+    self.prevPopInputs = deepcopy(currentPopInputs)
 
   def _submitRun(self, point, traj, step, moreInfo=None):
     """
@@ -1087,7 +1091,7 @@ class GeneticAlgorithm(RavenSampled):
       'matingPopRanks':       self.matingPopRanks,
       'matingPop_g':          self.matingPop_g,
       'matingPopCD':          self.matingPopCD,
-      'prevPop_inputs':       self.prevPop_inputs,
+      'prevPopInputs':       self.prevPopInputs,
       'currentPop_ages':      self.currentPop_ages,
       'bestPoint':            self.bestPoint,
       'bestFitness':          self.bestFitness,
@@ -1120,7 +1124,7 @@ class GeneticAlgorithm(RavenSampled):
     self.matingPopRanks      = state['matingPopRanks']
     self.matingPop_g         = state['matingPop_g']
     self.matingPopCD         = state['matingPopCD']
-    self.prevPop_inputs      = state['prevPop_inputs']
+    self.prevPopInputs      = state['prevPopInputs']
     self.currentPop_ages     = state['currentPop_ages']
     self.bestPoint           = state['bestPoint']
     self.bestFitness         = state['bestFitness']
