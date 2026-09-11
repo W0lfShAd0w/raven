@@ -261,9 +261,11 @@ from ..utils.gaUtils import dataArrayToDict, datasetToDataArray
 from .RavenSampled import RavenSampled
 from .parentSelectors.parentSelectors import returnInstance as parentSelectionReturnInstance
 from .crossOverOperators.crossovers import returnInstance as crossoversReturnInstance
-from .crossOverOperators.crossovers import __crossovers as crossoversList # Fetch updated list of crossover operators
+from .crossOverOperators.crossovers import __crossovers as _crossovers # {name: implementation}
+crossoversList = list(_crossovers) # names only; makeEnumType expects a list of strings
 from .mutators.mutators import returnInstance as mutatorsReturnInstance
-from .mutators.mutators import __mutators as mutatorsList # Fetch updated list of mutator operators
+from .mutators.mutators import __mutators as _mutators # {name: implementation}
+mutatorsList = list(_mutators) # names only; makeEnumType expects a list of strings
 from .survivorSelectors.survivorSelectors import returnInstance as survivorSelectionReturnInstance
 from .survivorSelection import survivorSelection as survivorSelectionProcess
 from .constraintHandling.constraintHandling import constraintHandling
