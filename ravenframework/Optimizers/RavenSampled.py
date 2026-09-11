@@ -24,7 +24,7 @@ from __future__ import division, print_function, unicode_literals, absolute_impo
 # External Modules----------------------------------------------------------------------------------
 import abc
 import ast
-from collections import deque
+from collections import deque, OrderedDict
 import copy
 import datetime
 import h5py
@@ -44,6 +44,18 @@ from .Optimizer import Optimizer
 _NAN_SENTINEL    = '__checkpoint_nan__'
 _POSINF_SENTINEL = '__checkpoint_inf__'
 _NEGINF_SENTINEL = '__checkpoint_neginf__'
+
+# Checkpoint file format version. 1.1: dedup cache is now capped (_MAX_DEDUP_CACHE_SIZE) and no
+# longer stores a separate '_evaluatedSubmissionKeys' field; 1.0 checkpoints still restore
+# correctly, that field is just ignored on read.
+_CHECKPOINT_VERSION = '1.1'
+
+# Cap on the number of evaluated-point entries kept for deduplication. Without a cap, both
+# in-memory usage and per-checkpoint JSON serialization time grow with total run length (every
+# evaluated point is kept forever). Oldest entries are evicted first; an evicted point is simply
+# no longer recognized as a duplicate and gets re-evaluated, which is correct (if wasteful) rather
+# than the alternative of matching it as a duplicate but having no cached result to replay.
+_MAX_DEDUP_CACHE_SIZE = 5000
 
 def _encodeCheckpointState(obj):
   """
@@ -235,8 +247,11 @@ class RavenSampled(Optimizer):
     self._optPointHistory = {}  # a dictionary of deque's by traj (-1 is most recent)
     self._maxHistLen = 2  # FIXME who should set this?
     self._rerunsSinceAccept = {} # by traj, how long since our last accepted point
-    self._evaluatedSubmissionKeys = set()  # Points we already evaluated; used to quickly detect duplicates.
-    self._evaluatedSubmissionData = {}  # Saved result for each evaluated point; duplicates reuse this result.
+    # Bounded (see _MAX_DEDUP_CACHE_SIZE) LRU-style cache: key -> saved result for each evaluated
+    # point. Also serves as the "already evaluated" lookup for duplicate detection, so a key and
+    # its cached result are always evicted together (an evicted point is just no longer flagged
+    # as a duplicate, never flagged-but-uncachable).
+    self._evaluatedSubmissionData = OrderedDict()
     self._deduplicatedSubmissions = []  # Duplicate runs we skipped now and will be restored later from cached results.
     # __private
     self.__stepCounter = {}  # tracks the "generation" or "iteration" of each trajectory -> iteration is defined by inheritor
@@ -527,8 +542,9 @@ class RavenSampled(Optimizer):
       '_convergedTraj':           self._convergedTraj,
       '_trajCounter':             self._trajCounter,
       '_submissionQueue':         list(self._submissionQueue),
-      '_evaluatedSubmissionKeys': self._evaluatedSubmissionKeys,
-      '_evaluatedSubmissionData': self._evaluatedSubmissionData,
+      # bounded by _MAX_DEDUP_CACHE_SIZE, so this no longer grows (and re-serializes) without limit
+      # as the run gets longer; oldest entries are dropped from dedup detection along with it.
+      '_evaluatedSubmissionData': dict(self._evaluatedSubmissionData),
     }
 
   def _restoreCheckpointState(self, state):
@@ -550,10 +566,12 @@ class RavenSampled(Optimizer):
     self._convergedTraj           = {int(k): v for k, v in state['_convergedTraj'].items()}
     self._activeTraj              = state['_activeTraj']
     self._submissionQueue         = deque(state['_submissionQueue'])
-    self._evaluatedSubmissionKeys = state['_evaluatedSubmissionKeys']
     # Keys are tuple-of-tuples serialized as strings; restore via ast.literal_eval.
-    self._evaluatedSubmissionData = {ast.literal_eval(k): v
-                                     for k, v in state['_evaluatedSubmissionData'].items()}
+    # '_evaluatedSubmissionKeys' is ignored if present (older checkpoint format, pre-dedup-cache-cap):
+    # dedup lookup now uses _evaluatedSubmissionData directly, so no separate key set is restored.
+    self._evaluatedSubmissionData = OrderedDict(
+      (ast.literal_eval(k), v) for k, v in state['_evaluatedSubmissionData'].items())
+    self._trimDedupCache()  # in case an older, uncapped checkpoint exceeds the current cap
 
   def _validateCheckpoint(self, checkpoint):
     """
@@ -563,7 +581,7 @@ class RavenSampled(Optimizer):
       @ In, checkpoint, dict, loaded checkpoint dict
       @ Out, None
     """
-    currentVersion = '1.0' # Currently supported checkpoint version #NOTE: update this if the checkpoint format is changed.
+    currentVersion = _CHECKPOINT_VERSION # Currently supported checkpoint version.
     ckptVersion = checkpoint.get('version', '0.0')
     if ckptVersion != currentVersion:
       self.raiseAWarning(f'Restart file version "{ckptVersion}" may differ from the current '
@@ -628,7 +646,7 @@ class RavenSampled(Optimizer):
         self.raiseAWarning(f'Could not save SolutionExport data to checkpoint: {err}')
     with h5py.File(self._checkpointFile, 'w') as hf:
       # Root attributes: human-readable metadata
-      hf.attrs['version']       = '1.0'
+      hf.attrs['version']       = _CHECKPOINT_VERSION
       hf.attrs['optimizerType'] = self.__class__.__name__
       hf.attrs['optimizerName'] = self.name
       hf.attrs['generation']    = generation
@@ -864,8 +882,7 @@ class RavenSampled(Optimizer):
     self._rerunsSinceAccept = {}
     self.__stepCounter = {}
     self._submissionQueue = deque()
-    self._evaluatedSubmissionKeys = set()
-    self._evaluatedSubmissionData = {}
+    self._evaluatedSubmissionData = OrderedDict()
     self._deduplicatedSubmissions = []
 
   ###################
@@ -900,17 +917,29 @@ class RavenSampled(Optimizer):
       return
     if isinstance(rlz, dict):
       key = self._makeSubmissionKey(rlz)
-      self._evaluatedSubmissionKeys.add(key)
       self._evaluatedSubmissionData[key] = copy.deepcopy(rlz)
+      self._evaluatedSubmissionData.move_to_end(key)
+      self._trimDedupCache()
       return
     if 'RAVEN_sample_ID' not in rlz.sizes:
       return
     for i in range(rlz.sizes['RAVEN_sample_ID']):
       point = {var: np.atleast_1d(rlz[var].data)[i] for var in self.toBeSampled}
       key = self._makeSubmissionKey(point)
-      self._evaluatedSubmissionKeys.add(key)
       cached = rlz.isel({'RAVEN_sample_ID': [i]}).copy(deep=True)
       self._evaluatedSubmissionData[key] = cached
+      self._evaluatedSubmissionData.move_to_end(key)
+      self._trimDedupCache()
+
+  def _trimDedupCache(self):
+    """
+      Evicts the least-recently-added entries from the deduplication cache once it exceeds
+      _MAX_DEDUP_CACHE_SIZE, bounding both memory use and per-checkpoint serialization cost.
+      @ In, None
+      @ Out, None
+    """
+    while len(self._evaluatedSubmissionData) > _MAX_DEDUP_CACHE_SIZE:
+      self._evaluatedSubmissionData.popitem(last=False)
 
   def _recordDeduplicatedSubmission(self, key, info):
     """
@@ -1009,7 +1038,7 @@ class RavenSampled(Optimizer):
     """
     if self._deduplication:
       key = self._makeSubmissionKey(point)
-      if key in self._evaluatedSubmissionKeys:
+      if key in self._evaluatedSubmissionData:
         self.raiseADebug(f'Skipping duplicate run: {self.denormalizeData(point)} | {info}')
         self._recordDeduplicatedSubmission(key, info)
         return False

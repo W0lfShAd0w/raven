@@ -90,7 +90,9 @@ class Optimizer(AdaptiveSampler):
         descr=r"""if True, skip model evaluations for duplicate optimization points that were already
               evaluated earlier in this optimizer run. Duplicate detection is based on exact equality of
               sampled variable values and applies to all RavenSampled-based optimizers; points that differ
-              by even a small floating-point amount are not considered duplicates. \default{False}"""))
+              by even a small floating-point amount are not considered duplicates. Only a bounded number
+              of the most recently evaluated points are remembered for this purpose; older points may be
+              re-evaluated instead of being detected as duplicates. \default{False}"""))
 
     # modify Sampler variable nodes
     variable = specs.getSub('variable')
