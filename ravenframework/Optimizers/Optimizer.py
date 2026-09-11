@@ -88,8 +88,9 @@ class Optimizer(AdaptiveSampler):
     specs.addSub(InputData.parameterInputFactory('deduplication', contentType=InputTypes.BoolType, strictMode=True,
         printPriority=91,
         descr=r"""if True, skip model evaluations for duplicate optimization points that were already
-              evaluated earlier in this optimizer run. Duplicate detection is based on sampled variable
-              values and applies to all RavenSampled-based optimizers. \default{False}"""))
+              evaluated earlier in this optimizer run. Duplicate detection is based on exact equality of
+              sampled variable values and applies to all RavenSampled-based optimizers; points that differ
+              by even a small floating-point amount are not considered duplicates. \default{False}"""))
 
     # modify Sampler variable nodes
     variable = specs.getSub('variable')

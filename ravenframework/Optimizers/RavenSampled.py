@@ -881,7 +881,9 @@ class RavenSampled(Optimizer):
       if hasattr(val, 'data'):
         val = val.data
       arr = np.asarray(val).reshape(-1)
-      key.append(tuple(int(x) for x in arr))
+      # key on exact values (not int(x)): truncating would collapse every continuous point
+      # sharing an integer part (e.g. all [0,1]-normalized values) onto the same key
+      key.append(tuple(float(x) for x in arr))
     return tuple(key)
 
   def _cacheEvaluatedSubmissionPoints(self, rlz):
