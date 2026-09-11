@@ -721,8 +721,10 @@ class GeneticAlgorithm(RavenSampled):
       self._normalizeFitness = None #allow the user to specify NoneType in the string input
     elif self._normalizeFitness.lower() == 'true':
       self._normalizeFitness = 'zscore' #default to zscore normalization
-    elif self._normalizeFitness.lower() not in ['maxmin','zscore']:
-      self.raiseAnError(IOError, "Requested fitness normalization type not supported. Available options include 'maxmin' and 'zscore'.") #!TODO: maxmin has not yet been implemented.
+    elif self._normalizeFitness.lower() != 'zscore':
+      # 'maxmin' is intentionally rejected here (not in the accepted list): it is not implemented
+      # in the normalization step below, so accepting it would silently skip normalization.
+      self.raiseAnError(IOError, "Requested fitness normalization type not supported. Available options include 'zscore'.")
 
     ####################################################################################
     # constraint node                                                                  #
@@ -915,7 +917,9 @@ class GeneticAlgorithm(RavenSampled):
             self.currentPop_ages[i] = matches[0][1]
 
       # initialize multi-objective containers
-      currentPopRanks = []; currentPopCD = [] #!TODO: it would be better to simply call _parentSelectionInstance two different ways than require these values be initialized.
+      # TODO it would be cleaner to call _parentSelectionInstance two different ways (single- vs.
+      # multi-objective) rather than requiring these placeholders to be initialized here.
+      currentPopRanks = []; currentPopCD = []
   ## Single-objective post-processing
       if not self._isMultiObjective:
           self._collectOptPoint(rlz, currentPopFitness, currentPop_objvals[0], currentPop_g)
@@ -957,7 +961,8 @@ class GeneticAlgorithm(RavenSampled):
                                                 crowdDistance=self.matingPopCD,
                                                 objVar=self._objectiveVar,
                                                 isMultiObjective = self._isMultiObjective)
-      else: # first generation #!TODO: split this into a separate call for single/multi.
+      else: # first generation
+        # TODO split this into a separate call for single- vs. multi-objective, per the note above.
         parents = self._parentSelectionInstance(currentPopInputs,
                                                 variables=list(self.toBeSampled),
                                                 fitness=currentPopFitness,
@@ -1288,7 +1293,8 @@ class GeneticAlgorithm(RavenSampled):
       @ Out, point, dict, point used in this realization
     """
     varList = set(list(self.toBeSampled.keys()) + self._solutionExport.getVars('input') + self._solutionExport.getVars('output'))
-    #!varList = [var for var in varList if var not in self._objectiveVar] #!TODO: this appears to be desyncing the estimated 'final' rlzs.
+    # objective vars are intentionally kept in varList: filtering them out here was tried and
+    # found to desync the estimated 'final' realizations.
     selVars = [var for var in varList if var in rlz.data_vars]
 
     rankOneIDX = np.where(rank.data == 1)[0].tolist()

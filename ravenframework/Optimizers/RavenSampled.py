@@ -736,7 +736,7 @@ class RavenSampled(Optimizer):
     self.raiseAMessage(f'Successfully resumed optimizer "{self.name}" from restart file '
                       f'"{self._restartFromFile}" (last completed generation: {gen}).')
 
-  def finalizeSampler(self, failedRuns): #!TODO: is this unused??
+  def finalizeSampler(self, failedRuns):
     """
       Last tasks to perform before Step is finished.
       @ In, failedRuns, list, runs that failed as part of this sampling

@@ -14,7 +14,8 @@
 """
   Implementation of survivorSelection step for new generation
   selection process in Genetic Algorithm.
-  NOTE: this file only exists to call methods in survivorSelectors.py, making for a confusing and convoluted call stack. - rollnk
+  NOTE: this file only exists to call methods in survivorSelectors.py, making for a confusing and
+  convoluted call stack. Candidate for a follow-up structural cleanup, not resolved here.
 
   Created Apr,3,2024
   @authors: Mohammad Abdo, Junyung Kim

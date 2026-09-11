@@ -269,7 +269,9 @@ class DataSet(DataObject):
     #  This is because the cNDarray collector expects a LIST of realization, not a single realization.
     #  Maybe the "append" method should be renamed to "extend" or changed to append one at a time.
     # set realizations as a list of realizations (which are ordered lists)
-    #!TODO: why are we arbitrarily filtering the vars in rlz through self._orderedVars?? just use the data provided. This applies to the "append" line for self._collector as well.
+    # TODO: consider whether filtering the vars in rlz through self._orderedVars here (and in the
+    # "append" line for self._collector below) is still necessary, or whether the data provided
+    # in rlz could be used directly. Open design question for a follow-up, not resolved here.
     newData = np.array(list(rlz[var] for var in self._orderedVars)+[0.0], dtype=object)
     newData = newData[:-1]
     # if data storage isn't set up, set it up
