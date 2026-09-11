@@ -903,8 +903,6 @@ class GeneticAlgorithm(RavenSampled):
             if np.array_equal(val.data, indv.data):
               matches.append((indx, self.matingPopAges[indx]))
           if matches:
-            ages_seen = set(a for _, a in matches)
-            print(f'DEBUGAMBIG counter={self.counter} i={i} value={indv.data} nmatches={len(matches)} ages={[a for _,a in matches]} ambiguous={len(ages_seen)>1}')
             self.currentPop_ages[i] = matches[0][1]
 
       # initialize multi-objective containers
