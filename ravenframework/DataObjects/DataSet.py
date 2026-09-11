@@ -66,7 +66,6 @@ class DataSet(DataObject):
     self._samplerTag      = None
     self.inputKDTree      = None
     self._autogenerate    = set()            # index vars in here are automatically generated
-    self.addedVars        = []               # placeholder list for additional vars to be explicitly requested. This is not intended for general use.
 
   ### INPUT SPECIFICATION ###
   @classmethod
@@ -241,7 +240,7 @@ class DataSet(DataObject):
           rlz[autoindex] = np.arange(expectedLength)
     # clean out entries that aren't desired
     try:
-      rlz = dict((var, rlz[var]) for var in self.getVars() + self.indexes + self.addedVars)
+      rlz = dict((var, rlz[var]) for var in self.getVars() + self.indexes)
     except KeyError as e:
       self.raiseAWarning('Variables provided:',rlz.keys())
       self.raiseAnError(KeyError, f'Provided realization does not have all requisite values for object "{self.name}": "{e.args[0]}"')

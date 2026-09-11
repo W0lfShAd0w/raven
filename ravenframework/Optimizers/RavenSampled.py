@@ -1320,11 +1320,13 @@ class RavenSampled(Optimizer):
         toExport[var] = rlz[var]
     # formatting
     toExport = dict((var, np.atleast_1d(val)) for var, val in toExport.items())
-    # Force solutionExport to expect all the vars we want to give it.
-    for key in toExport.keys():
-      if key not in self._solutionExport.vars:
-        self._solutionExport.addedVars.append(key)
-    self._solutionExport.addedVars = list(set(self._solutionExport.addedVars))
+    # Register any vars solutionExport doesn't already know about (e.g. algorithm-specific
+    # metrics from _addToSolutionExport) through the normal meta-variable machinery, rather than
+    # a bespoke list: this keeps column order deterministic (insertion order) and keeps
+    # solutionExport's own bookkeeping (_metavars/_orderedVars) as the single source of truth.
+    newVars = [key for key in toExport if key not in self._solutionExport.vars]
+    if newVars:
+      self._solutionExport.addExpectedMeta(newVars, overwrite=True)
     # Write solution data to solutionExport
     self._solutionExport.addRealization(toExport)
 
