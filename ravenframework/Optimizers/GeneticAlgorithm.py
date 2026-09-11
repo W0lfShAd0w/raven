@@ -1209,6 +1209,7 @@ class GeneticAlgorithm(RavenSampled):
             rlzDict['FitnessEvaluation_'+fitName] = fitness[fitName].data[i]
           for ind, consName in enumerate([y.name for y in (self._constraintFunctions + self._impConstraintFunctions)]):
             rlzDict['ConstraintEvaluation_'+consName] = g.data[i,ind]
+          rlzDict['age'] = int(self.currentPop_ages[i]) if self.currentPop_ages is not None else 0
         else:
           varList = self._solutionExport.getVars('input') + self._solutionExport.getVars('output') + list(self.toBeSampled.keys())
           rlzDict = dict((var,np.atleast_1d(rlz[var].data)[i]) for var in set(varList) if var in rlz.data_vars)
@@ -1218,6 +1219,7 @@ class GeneticAlgorithm(RavenSampled):
           rlzDict['fitness'] = np.atleast_1d(fitness.to_array()[:,i])
           for ind, consName in enumerate(g['Constraint'].values):
             rlzDict['ConstraintEvaluation_'+consName] = g[i,ind]
+          rlzDict['age'] = int(self.currentPop_ages[i]) if self.currentPop_ages is not None else 0
         self._updateSolutionExport(traj, rlzDict, acceptable, None)
 
     # decide what to do next
@@ -1665,7 +1667,14 @@ class GeneticAlgorithm(RavenSampled):
       @ Out, toAdd, dict, additional entries
     """
     # meta variables
-    toAdd = {'age': 0 if self.currentPop_ages is None else self.currentPop_ages,
+    # NOTE: when rlz is a single row from the _resolveNewGeneration per-individual loop, it
+    # already carries the age for THIS SPECIFIC row (see the NOTE there); use that instead of
+    # dumping the whole self.currentPop_ages array, which has no correspondence to this one row.
+    if isinstance(rlz, dict) and 'age' in rlz:
+      ageToAdd = rlz['age']
+    else:
+      ageToAdd = 0 if self.currentPop_ages is None else self.currentPop_ages
+    toAdd = {'age': ageToAdd,
              'batchId': self.batchId,
              'AHDp': self.ahdp,
              'AHD': self.ahd,
