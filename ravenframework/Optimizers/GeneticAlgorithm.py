@@ -877,6 +877,11 @@ class GeneticAlgorithm(RavenSampled):
 
     if self._activeTraj:
   ## 4. Survivor selection
+      # NOTE: snapshot the mating pool BEFORE survivor selection merges this round's
+      # currentPopInputs into it, otherwise looking currentPopInputs up in the POST-merge pool
+      # always finds itself and reports age 0.
+      prevMatingPopInputs = self.matingPopInputs
+      prevMatingPopAges = self.matingPopAges
       if not self._isMultiObjective:
         survivorSelectionProcess.singleObjSurvivorSelect(self, info, rlz, traj,
                                                          currentPopInputs,
@@ -891,17 +896,19 @@ class GeneticAlgorithm(RavenSampled):
                                                         currentPop_g)
       # update the age estimate for the current population for printing later
       self.currentPop_ages = np.zeros(len(currentPopInputs), dtype=int)
-      if self.counter > 1:
+      # NOTE: prevMatingPopAges is None until the first survivor-selection call initializes it;
+      # leave currentPop_ages at its all-zero default.
+      if self.counter > 1 and prevMatingPopAges is not None:
         for i in range(len(self.currentPop_ages)):
           indv = currentPopInputs[i]
           matches = []
-          for indx, val in enumerate(self.matingPopInputs):
+          for indx, val in enumerate(prevMatingPopInputs):
             # NOTE: compare gene values only, not full DataArray equality: val and indv carry
             # independent 'chromosome' coordinate labels (their positions in the mating pool vs.
             # the current batch), so val.equals(indv) fails on coordinate mismatch even when the
             # genotypes are identical.
             if np.array_equal(val.data, indv.data):
-              matches.append((indx, self.matingPopAges[indx]))
+              matches.append((indx, prevMatingPopAges[indx]))
           if matches:
             self.currentPop_ages[i] = matches[0][1]
 
