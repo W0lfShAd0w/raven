@@ -894,14 +894,18 @@ class GeneticAlgorithm(RavenSampled):
       if self.counter > 1:
         for i in range(len(self.currentPop_ages)):
           indv = currentPopInputs[i]
+          matches = []
           for indx, val in enumerate(self.matingPopInputs):
             # NOTE: compare gene values only, not full DataArray equality: val and indv carry
             # independent 'chromosome' coordinate labels (their positions in the mating pool vs.
             # the current batch), so val.equals(indv) fails on coordinate mismatch even when the
             # genotypes are identical.
             if np.array_equal(val.data, indv.data):
-              self.currentPop_ages[i] = self.matingPopAges[indx]
-              break
+              matches.append((indx, self.matingPopAges[indx]))
+          if matches:
+            ages_seen = set(a for _, a in matches)
+            print(f'DEBUGAMBIG counter={self.counter} i={i} value={indv.data} nmatches={len(matches)} ages={[a for _,a in matches]} ambiguous={len(ages_seen)>1}')
+            self.currentPop_ages[i] = matches[0][1]
 
       # initialize multi-objective containers
       currentPopRanks = []; currentPopCD = [] #!TODO: it would be better to simply call _parentSelectionInstance two different ways than require these values be initialized.
@@ -1265,6 +1269,7 @@ class GeneticAlgorithm(RavenSampled):
   def _collectOptPointMulti(self, rlz, population, rank, CD, objVal, fitness, constraintsV):
     """
       Collects the point (dict) from a realization
+      @ In, rlz, dict, collected realization
       @ In, population, Dataset, container containing the population
       @ In, rank, xr.DataArray, rank values at each chromosome of the realization
       @ In, CD (crowdingDistance), xr.DataArray, crowdingDistance values at each chromosome of the realization
