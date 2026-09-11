@@ -1672,6 +1672,19 @@ class GeneticAlgorithm(RavenSampled):
     # dumping the whole self.currentPop_ages array, which has no correspondence to this one row.
     if isinstance(rlz, dict) and 'age' in rlz:
       ageToAdd = rlz['age']
+    elif isinstance(rlz, dict) and self.matingPopInputs is not None and self.matingPopAges is not None:
+      # NOTE: this is the "final" best-point summary row. Don't increment its age since its just a
+      # summary of the population history.
+      try:
+        denormed = self.denormalizeData(dict((var, rlz[var]) for var in self.toBeSampled if var in rlz))
+        indv = np.array([np.atleast_1d(denormed[var])[0] for var in self.toBeSampled])
+        ageToAdd = 0
+        for indx, val in enumerate(self.matingPopInputs):
+          if np.allclose(val.data, indv):
+            ageToAdd = self.matingPopAges[indx]
+            break
+      except KeyError:
+        ageToAdd = 0 if self.currentPop_ages is None else self.currentPop_ages
     else:
       ageToAdd = 0 if self.currentPop_ages is None else self.currentPop_ages
     toAdd = {'age': ageToAdd,
