@@ -908,7 +908,7 @@ class GeneticAlgorithm(RavenSampled):
             # the current batch), so val.equals(indv) fails on coordinate mismatch even when the
             # genotypes are identical.
             if np.array_equal(val.data, indv.data):
-              matches.append((indx, prevMatingPopAges[indx]))
+              matches.append((indx, prevMatingPopAges[indx] + 1))
           if matches:
             self.currentPop_ages[i] = matches[0][1]
 
