@@ -78,7 +78,7 @@ def multiObjSurvivorSelect(self, info, rlz, traj, individuals, individualFitness
     self.matingPopInputs,self.matingPopRanks, \
     self.matingPopAges,self.matingPopCD, \
     self.matingPopObjVals,self.matingPopFitness, \
-    self.matingPop_g                  = self._survivorSelectionInstance(age=self.matingPopAges,
+    self.matingPopG                  = self._survivorSelectionInstance(age=self.matingPopAges,
                                                                          variables=list(self.toBeSampled),
                                                                          population=self.matingPopInputs,
                                                                          individuals=rlz,
@@ -86,11 +86,11 @@ def multiObjSurvivorSelect(self, info, rlz, traj, individuals, individualFitness
                                                                          offObjectiveVal=objectiveVal,
                                                                          popFit = self.matingPopFitness,
                                                                          offFit = individualFitness,
-                                                                         popConstV = self.matingPop_g,
+                                                                         popConstV = self.matingPopG,
                                                                          direction=self._minMax,
                                                                          offConstV = g)
   else:
     self.matingPopInputs = individuals
     self.matingPopFitness = individualFitness
     self.matingPopObjVals = objectiveVal
-    self.matingPop_g = g
+    self.matingPopG = g

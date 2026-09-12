@@ -320,13 +320,13 @@ class GeneticAlgorithm(RavenSampled):
     self.needDenormalized()                                      # the default in all optimizers is to normalize the data which is not the case here
     self.batchId = 0
     self.prevPopInputs = None
-    self.currentPop_ages = None
+    self.currentPopAges = None
     self.matingPopInputs = None                                 # panda Dataset container containing the population at the beginning of each generation iteration
     self.matingPopObjVals = None                                # objective values of solutions
     self.matingPopAges = None                                   # population age
     self.matingPopFitness = None                                # population fitness
     self.matingPopRanks = None                                  # population rank (for Multi-objective optimization only)
-    self.matingPop_g = None                                      # calculated contraints value
+    self.matingPopG = None                                      # calculated contraints value
     self.matingPopCD = None                                     # population crowding distance (for Multi-objective optimization only)
     self.ahdp = np.NaN                                           # p-Average Hausdorff Distance between populations
     self.ahd  = np.NaN                                           # Hausdorff Distance between populations
@@ -855,15 +855,15 @@ class GeneticAlgorithm(RavenSampled):
     self.incrementIteration(traj)
 
     currentPopInputs = datasetToDataArray(rlz, list(self.toBeSampled))
-    currentPop_objvals = []
+    currentPopObjVals = []
     for i in range(len(self._objectiveVar)):
-      currentPop_objvals.append(list(np.atleast_1d(rlz[self._objectiveVar[i]].data)))
+      currentPopObjVals.append(list(np.atleast_1d(rlz[self._objectiveVar[i]].data)))
 
   ## 1. Check constraint violations and calculate the constraint function g (<0 if the constraint is violated)
-    currentPop_g = constraintHandling(self, info, rlz, currentPopInputs, currentPop_objvals, multiObjective=self._isMultiObjective)
+    currentPopG = constraintHandling(self, info, rlz, currentPopInputs, currentPopObjVals, multiObjective=self._isMultiObjective)
 
   ## 2. Normalize values for fitness function evaluation, if requested.
-    norm_rlz = deepcopy(rlz)
+    normRlz = deepcopy(rlz)
     if self._normalizeFitness:
       # collect variable names to normalize
       constrVarsList = self._constraintFunctions + self._impConstraintFunctions
@@ -879,24 +879,24 @@ class GeneticAlgorithm(RavenSampled):
           self.normScores[var] = (mean, std)
           # normalize values for fitness calc
           for i in range(len(rlz[var])):
-            norm_rlz[var][i] = normalizedValues[i]
+            normRlz[var][i] = normalizedValues[i]
       # normalize evaluated constraint differences
-      for i in range(len(currentPop_g)):
+      for i in range(len(currentPopG)):
         for j in range(len(constrVarsList)):
           #penalty represents a Delta applied to the obj value; i.e. (C_k - mu)/std - (C_i - mu)/std = (C_k - C_i)/std
           #  If the constraint uses multiple variables/units, there's no easy way to handle it so we'll just assume the
           #  first variable is the primary one.
-          currentPop_g[i][j] = currentPop_g[i][j] / self.normScores[constrVarsList[j].parameterNames()[0]][1]
-          if np.isnan(currentPop_g[i][j]):
-            currentPop_g[i][j] = 0.0
+          currentPopG[i][j] = currentPopG[i][j] / self.normScores[constrVarsList[j].parameterNames()[0]][1]
+          if np.isnan(currentPopG[i][j]):
+            currentPopG[i][j] = 0.0
 
   ## 3. Compute fitness for the current population
-    currentPopFitness = self._fitnessInstance(norm_rlz,
+    currentPopFitness = self._fitnessInstance(normRlz,
                                                objVar=self._objectiveVar,
                                                a=self._objCoeff,
                                                b=self._penaltyCoeff,
                                                penalty=None,
-                                               constraintFunction=currentPop_g,
+                                               constraintFunction=currentPopG,
                                                constraintNum=self._numOfConst,
                                                type=self._minMax)
 
@@ -917,20 +917,20 @@ class GeneticAlgorithm(RavenSampled):
         survivorSelectionProcess.singleObjSurvivorSelect(self, info, rlz, traj,
                                                          currentPopInputs,
                                                          currentPopFitness,
-                                                         currentPop_objvals,
-                                                         currentPop_g)
+                                                         currentPopObjVals,
+                                                         currentPopG)
       else:
         survivorSelectionProcess.multiObjSurvivorSelect(self, info, rlz, traj,
                                                         currentPopInputs,
                                                         currentPopFitness,
-                                                        currentPop_objvals,
-                                                        currentPop_g)
+                                                        currentPopObjVals,
+                                                        currentPopG)
       # update the age estimate for the current population for printing later
-      self.currentPop_ages = np.zeros(len(currentPopInputs), dtype=int)
+      self.currentPopAges = np.zeros(len(currentPopInputs), dtype=int)
       # NOTE: prevMatingPopAges is None until the first survivor-selection call initializes it;
-      # leave currentPop_ages at its all-zero default.
+      # leave currentPopAges at its all-zero default.
       if self.counter > 1 and prevMatingPopAges is not None:
-        for i in range(len(self.currentPop_ages)):
+        for i in range(len(self.currentPopAges)):
           indv = currentPopInputs[i]
           matches = []
           for indx, val in enumerate(prevMatingPopInputs):
@@ -941,7 +941,7 @@ class GeneticAlgorithm(RavenSampled):
             if np.array_equal(val.data, indv.data):
               matches.append((indx, prevMatingPopAges[indx] + 1))
           if matches:
-            self.currentPop_ages[i] = matches[0][1]
+            self.currentPopAges[i] = matches[0][1]
 
       # initialize multi-objective containers
       # TODO it would be cleaner to call _parentSelectionInstance two different ways (single- vs.
@@ -949,8 +949,8 @@ class GeneticAlgorithm(RavenSampled):
       currentPopRanks = []; currentPopCD = []
   ## Single-objective post-processing
       if not self._isMultiObjective:
-          self._collectOptPoint(rlz, currentPopFitness, currentPop_objvals[0], currentPop_g)
-          self._resolveNewGeneration(traj, rlz, info, self.prevPopInputs, currentPop_objvals[0], currentPopFitness, currentPop_g)
+          self._collectOptPoint(rlz, currentPopFitness, currentPopObjVals[0], currentPopG)
+          self._resolveNewGeneration(traj, rlz, info, self.prevPopInputs, currentPopObjVals[0], currentPopFitness, currentPopG)
   ## Multi-objective post-processing
       else:
         # list for Rank and CD calculation
@@ -972,10 +972,10 @@ class GeneticAlgorithm(RavenSampled):
                                    currentPopInputs,
                                    currentPopRanks,
                                    currentPopCD,
-                                   currentPop_objvals,
+                                   currentPopObjVals,
                                    currentPopFitness,
-                                   currentPop_g)
-        self._resolveNewGeneration(traj, rlz, info, self.prevPopInputs, currentPop_objvals, currentPopFitness, currentPop_g, currentPopRanks, currentPopCD)
+                                   currentPopG)
+        self._resolveNewGeneration(traj, rlz, info, self.prevPopInputs, currentPopObjVals, currentPopFitness, currentPopG, currentPopRanks, currentPopCD)
 
   ## 7. Parent selection from population
       if self.counter > 1:
@@ -1132,10 +1132,10 @@ class GeneticAlgorithm(RavenSampled):
       'matingPopAges':        self.matingPopAges,
       'matingPopFitness':     self.matingPopFitness,
       'matingPopRanks':       self.matingPopRanks,
-      'matingPop_g':          self.matingPop_g,
+      'matingPopG':          self.matingPopG,
       'matingPopCD':          self.matingPopCD,
       'prevPopInputs':       self.prevPopInputs,
-      'currentPop_ages':      self.currentPop_ages,
+      'currentPopAges':      self.currentPopAges,
       'bestPoint':            self.bestPoint,
       'bestFitness':          self.bestFitness,
       'multiBestPoint':       self.multiBestPoint,
@@ -1165,10 +1165,10 @@ class GeneticAlgorithm(RavenSampled):
     self.matingPopAges       = state['matingPopAges']
     self.matingPopFitness    = state['matingPopFitness']
     self.matingPopRanks      = state['matingPopRanks']
-    self.matingPop_g         = state['matingPop_g']
+    self.matingPopG         = state['matingPopG']
     self.matingPopCD         = state['matingPopCD']
     self.prevPopInputs      = state['prevPopInputs']
-    self.currentPop_ages     = state['currentPop_ages']
+    self.currentPopAges     = state['currentPopAges']
     self.bestPoint           = state['bestPoint']
     self.bestFitness         = state['bestFitness']
     self.multiBestPoint      = state['multiBestPoint']
@@ -1243,7 +1243,7 @@ class GeneticAlgorithm(RavenSampled):
             rlzDict['FitnessEvaluation_'+fitName] = fitness[fitName].data[i]
           for ind, consName in enumerate([y.name for y in (self._constraintFunctions + self._impConstraintFunctions)]):
             rlzDict['ConstraintEvaluation_'+consName] = g.data[i,ind]
-          rlzDict['age'] = int(self.currentPop_ages[i]) if self.currentPop_ages is not None else 0
+          rlzDict['age'] = int(self.currentPopAges[i]) if self.currentPopAges is not None else 0
         else:
           varList = self._solutionExport.getVars('input') + self._solutionExport.getVars('output') + list(self.toBeSampled.keys())
           rlzDict = dict((var,np.atleast_1d(rlz[var].data)[i]) for var in set(varList) if var in rlz.data_vars)
@@ -1253,7 +1253,7 @@ class GeneticAlgorithm(RavenSampled):
           rlzDict['fitness'] = np.atleast_1d(fitness.to_array()[:,i])
           for ind, consName in enumerate(g['Constraint'].values):
             rlzDict['ConstraintEvaluation_'+consName] = g[i,ind]
-          rlzDict['age'] = int(self.currentPop_ages[i]) if self.currentPop_ages is not None else 0
+          rlzDict['age'] = int(self.currentPopAges[i]) if self.currentPopAges is not None else 0
         self._updateSolutionExport(traj, rlzDict, acceptable, None)
 
     # decide what to do next
@@ -1704,7 +1704,7 @@ class GeneticAlgorithm(RavenSampled):
     # meta variables
     # NOTE: when rlz is a single row from the _resolveNewGeneration per-individual loop, it
     # already carries the age for THIS SPECIFIC row (see the NOTE there); use that instead of
-    # dumping the whole self.currentPop_ages array, which has no correspondence to this one row.
+    # dumping the whole self.currentPopAges array, which has no correspondence to this one row.
     if isinstance(rlz, dict) and 'age' in rlz:
       ageToAdd = rlz['age']
     elif isinstance(rlz, dict) and self.matingPopInputs is not None and self.matingPopAges is not None:
@@ -1719,9 +1719,9 @@ class GeneticAlgorithm(RavenSampled):
             ageToAdd = self.matingPopAges[indx]
             break
       except KeyError:
-        ageToAdd = 0 if self.currentPop_ages is None else self.currentPop_ages
+        ageToAdd = 0 if self.currentPopAges is None else self.currentPopAges
     else:
-      ageToAdd = 0 if self.currentPop_ages is None else self.currentPop_ages
+      ageToAdd = 0 if self.currentPopAges is None else self.currentPopAges
     toAdd = {'age': ageToAdd,
              'batchId': self.batchId,
              'AHDp': self.ahdp,
