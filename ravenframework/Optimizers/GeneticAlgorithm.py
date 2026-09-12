@@ -714,17 +714,8 @@ class GeneticAlgorithm(RavenSampled):
     else:
       self._penaltyCoeff = fitnessNode.findFirst('b').value if fitnessNode.findFirst('b') else None
       self._objCoeff = fitnessNode.findFirst('a').value if fitnessNode.findFirst('a') else None
-    self._normalizeFitness = fitnessNode.findFirst('normalize').value if fitnessNode.findFirst('normalize') else None
-    if not self._normalizeFitness:
-      self._normalizeFitness = False
-    elif self._normalizeFitness.lower() == 'none':
-      self._normalizeFitness = None #allow the user to specify NoneType in the string input
-    elif self._normalizeFitness.lower() == 'true':
-      self._normalizeFitness = 'zscore' #default to zscore normalization
-    elif self._normalizeFitness.lower() != 'zscore':
-      # 'maxmin' is intentionally rejected here (not in the accepted list): it is not implemented
-      # in the normalization step below, so accepting it would silently skip normalization.
-      self.raiseAnError(IOError, "Requested fitness normalization type not supported. Available options include 'zscore'.")
+    normalizeRaw = fitnessNode.findFirst('normalize').value if fitnessNode.findFirst('normalize') else None
+    self._normalizeFitness = self._resolveNormalizeFitnessOption(normalizeRaw)
 
     ####################################################################################
     # constraint node                                                                  #
@@ -798,6 +789,27 @@ class GeneticAlgorithm(RavenSampled):
 
     return traj
 
+  def _resolveNormalizeFitnessOption(self, raw):
+    """
+      Interprets the raw <normalize> node value (from <fitness>) into the internal
+      representation used by _useRealization. Split out from handleInput so the parsing
+      logic is directly unit-testable.
+      @ In, raw, str or None, raw string value of the <normalize> node, or None if absent
+      @ Out, resolved, bool or NoneType or str, False if normalization is disabled, None if
+        explicitly requested as 'none', otherwise the normalization type ('zscore')
+    """
+    if not raw:
+      return False
+    if raw.lower() == 'none':
+      return None #allow the user to specify NoneType in the string input
+    if raw.lower() == 'true':
+      return 'zscore' #default to zscore normalization
+    if raw.lower() != 'zscore':
+      # 'maxmin' is intentionally rejected here (not in the accepted list): it is not implemented
+      # in the normalization step below, so accepting it would silently skip normalization.
+      self.raiseAnError(IOError, "Requested fitness normalization type not supported. Available options include 'zscore'.")
+    return 'zscore'
+
   def needDenormalized(self):
     """
       Determines if the currently used algorithms should be normalizing the input space or not
@@ -810,6 +822,22 @@ class GeneticAlgorithm(RavenSampled):
   ######################################################################################
   # Run Methods                                                                        #
   ######################################################################################
+
+  @staticmethod
+  def _computeZscoreNormalization(values):
+    """
+      Computes zscore normalization (mean/std) for an array of values, guarding against
+      NaN results from a zero-std (constant) input by mapping them to 0.0. Split out from
+      _useRealization so the normalization math is directly unit-testable.
+      @ In, values, np.ndarray, raw values to normalize
+      @ Out, (mean, std, normalized), tuple, the mean, std, and normalized values (np.ndarray)
+    """
+    mean = np.mean(values)
+    std = np.std(values)
+    with np.errstate(invalid='ignore', divide='ignore'):
+      normalized = (np.asarray(values, dtype=float) - mean) / std
+    normalized = np.where(np.isnan(normalized), 0.0, normalized)
+    return mean, std, normalized.reshape(-1)
 
   ## TODO: We have to estimate the max number of unique chromosomes and make sure population size doesn't exceed that number. Or should it?
   def _useRealization(self, info, rlz):
@@ -847,12 +875,11 @@ class GeneticAlgorithm(RavenSampled):
       self.normScores = {}
       for var in varsToNormalize:
         if self._normalizeFitness == "zscore":
-          self.normScores[var] = (np.mean(rlz[var].to_dataframe().values), np.std(rlz[var].to_dataframe().values))
+          mean, std, normalizedValues = self._computeZscoreNormalization(rlz[var].to_dataframe().values)
+          self.normScores[var] = (mean, std)
           # normalize values for fitness calc
           for i in range(len(rlz[var])):
-            norm_rlz[var][i] = (rlz[var][i] - self.normScores[var][0]) / self.normScores[var][1] #perform zscore normalization
-            if np.isnan(norm_rlz[var][i]):
-              norm_rlz[var][i] = 0.0
+            norm_rlz[var][i] = normalizedValues[i]
       # normalize evaluated constraint differences
       for i in range(len(currentPop_g)):
         for j in range(len(constrVarsList)):
