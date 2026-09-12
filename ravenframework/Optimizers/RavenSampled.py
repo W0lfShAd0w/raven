@@ -1327,12 +1327,16 @@ class RavenSampled(Optimizer):
     # formatting
     toExport = dict((var, np.atleast_1d(val)) for var, val in toExport.items())
     # Register any vars solutionExport doesn't already know about (e.g. algorithm-specific
-    # metrics from _addToSolutionExport) through the normal meta-variable machinery, rather than
-    # a bespoke list: this keeps column order deterministic (insertion order) and keeps
-    # solutionExport's own bookkeeping (_metavars/_orderedVars) as the single source of truth.
+    # metrics from _addToSolutionExport, or bookkeeping vars carried over from the raw
+    # realization) through the normal meta-variable machinery, rather than a bespoke list: this
+    # keeps column order deterministic (insertion order) and keeps solutionExport's own
+    # bookkeeping (_metavars/_orderedVars) as the single source of truth. printByDefault=False
+    # keeps this data fully retained/accessible on solutionExport without forcing it into every
+    # CSV printout; only the variables the user actually requested (via the DataObject's own
+    # Input/Output nodes, or an explicit <what> request) get written.
     newVars = [key for key in toExport if key not in self._solutionExport.vars]
     if newVars:
-      self._solutionExport.addExpectedMeta(newVars, overwrite=True)
+      self._solutionExport.addExpectedMeta(newVars, overwrite=True, printByDefault=False)
     # Write solution data to solutionExport
     self._solutionExport.addRealization(toExport)
 
