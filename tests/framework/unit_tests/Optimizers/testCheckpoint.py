@@ -210,6 +210,23 @@ except Exception as err:
   print('checking bool', 'validate: matching checkpoint settings pass validation', '| unexpected exception:', err)
   results['fail'] += 1
 
+checkTrue('older-but-supported checkpoint versions are recognized',
+          '1.0' in RavenSampledModule._SUPPORTED_CHECKPOINT_VERSIONS)
+
+olderSupportedVersionCheckpoint = {
+  'version': '1.0',
+  'optimizerType': ga.__class__.__name__,
+  'optimizerName': ga.name,
+  'settings': matchingSettings,
+}
+try:
+  ga._validateCheckpoint(olderSupportedVersionCheckpoint)
+  checkTrue('validate: older-but-supported checkpoint version passes validation', True)
+except Exception as err:
+  print('checking bool', 'validate: older-but-supported checkpoint version passes validation',
+        '| unexpected exception:', err)
+  results['fail'] += 1
+
 #
 # end
 #
