@@ -833,7 +833,9 @@ class RavenSampled(Optimizer):
                       bestInPopulation[soln1] = self._sampledPopulationInfo[soln1]
       # try to add best solns to list of optimal solns
       for soln in bestInPopulation:
-        if (bestInPopulation[soln] > [max(opt[key]) for key in objectiveVars]).any(): #if any objective value in soln is greater than all corresponding objective values in opt, this is True.
+        # opt[key] is the single best realization's objective value (a scalar), not a population;
+        # np.atleast_1d guards max() against that scalar case (max() requires an iterable).
+        if (bestInPopulation[soln] > [max(np.atleast_1d(opt[key])) for key in objectiveVars]).any(): #if any objective value in soln is greater than all corresponding objective values in opt, this is True.
             for indx in range(len(self._solutionExport._data[list(self._solutionExport._data)[0]])): #search the population data for the inputs in soln
               if np.all(np.array(soln) == [self._solutionExport._data[key][indx].item() for key in self.toBeSampled]):
                 # add soln values from population data to opt
