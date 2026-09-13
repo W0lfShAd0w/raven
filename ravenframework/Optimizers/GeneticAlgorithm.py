@@ -262,10 +262,8 @@ from .RavenSampled import RavenSampled
 from .parentSelectors.parentSelectors import returnInstance as parentSelectionReturnInstance
 from .crossOverOperators.crossovers import returnInstance as crossoversReturnInstance
 from .crossOverOperators.crossovers import __crossovers as _crossovers # {name: implementation}
-crossoversList = list(_crossovers) # names only; makeEnumType expects a list of strings
 from .mutators.mutators import returnInstance as mutatorsReturnInstance
 from .mutators.mutators import __mutators as _mutators # {name: implementation}
-mutatorsList = list(_mutators) # names only; makeEnumType expects a list of strings
 from .survivorSelectors.survivorSelectors import returnInstance as survivorSelectionReturnInstance
 from .survivorSelection import survivorSelection as survivorSelectionProcess
 from .constraintHandling.constraintHandling import constraintHandling
@@ -466,7 +464,9 @@ class GeneticAlgorithm(RavenSampled):
                     \item \textit{uniformCrossover} - It randomly selects genes from two parent chromosomes with equal probability, creating offspring by exchanging genes at corresponding positions.
                   \end{itemize}""")
     crossover.addParam("type",
-                       InputTypes.makeEnumType('crossover','crossoverType',crossoversList),
+                       # built fresh from the live registry (not a frozen module-level snapshot) so that
+                       # plugin-registered crossovers (loaded lazily, after this module's import) are included
+                       InputTypes.makeEnumType('crossover','crossoverType',list(_crossovers)),
                        True,
                        descr="type of crossover operation to be used. See the list of options above.")
     crossoverPoint = InputData.parameterInputFactory('points', strictMode=True,
@@ -495,7 +495,9 @@ class GeneticAlgorithm(RavenSampled):
                   \item \textit{randomMutator} - It randomly selects a gene within an chromosome and mutates the gene.
                 \end{itemize} """)
     mutation.addParam("type",
-                      InputTypes.makeEnumType('mutation','mutationType',mutatorsList),
+                      # built fresh from the live registry (not a frozen module-level snapshot) so that
+                      # plugin-registered mutators (loaded lazily, after this module's import) are included
+                      InputTypes.makeEnumType('mutation','mutationType',list(_mutators)),
                       True,
                       descr="type of mutation operation to be used. See the list of options above.")
     mutationLocs = InputData.parameterInputFactory('locs', strictMode=True,
